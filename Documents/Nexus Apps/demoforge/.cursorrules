@@ -1,0 +1,10 @@
+You are building DemoForge 2.0, an autonomous demo delivery engine for NEXUS Holdings.
+
+Rules:
+- Stack: Next.js 16 App Router, TypeScript, Tailwind CSS v4, Supabase JS v2, Anthropic SDK
+- Database: Supabase project `nexus-core`, schema `demoforge` (always prefix queries with `.schema('demoforge')` or `demoforge.` in SQL)
+- Every server action and API route must have explicit error handling — no silent failures
+- All auto-triggered functions (email send, BioLoop score write, lead create) must log success/failure to `demoforge.system_logs`
+- Kuze is the AI persona. Any Anthropic API call that serves prospect-facing content must inject the Kuze system prompt from `lib/kuze.ts`
+- No placeholder UI. Every component must be functional, not mocked
+- Environment variables: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY, RESEND_API_KEY, RESEND_FROM_EMAIL, NEXT_PUBLIC_APP_URL, ADMIN_EMAIL
