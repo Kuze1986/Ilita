@@ -30,8 +30,12 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files (secrets); keep example tracked
 .env*
+!.env.example
+
+# Accidental nested clone with its own .git
+/Demoforge/
 
 # vercel
 .vercel

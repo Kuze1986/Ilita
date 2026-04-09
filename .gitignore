@@ -1,0 +1,16 @@
+# -----------------------------------------------------------------------------
+# Repair: this directory is the git repo root but only DemoForge should be
+# tracked. Ignore everything else under the user profile.
+# -----------------------------------------------------------------------------
+/*
+!.gitignore
+
+# Allow path to DemoForge only
+!/Documents/
+/Documents/**
+!/Documents/Nexus Apps/
+/Documents/Nexus Apps/**
+!/Documents/Nexus Apps/demoforge/
+
+# Nested accidental clone (separate .git) — never track
+/Documents/Nexus Apps/demoforge/Demoforge/
