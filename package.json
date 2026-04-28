@@ -1,0 +1,24 @@
+{
+  "name": "ilita-core",
+  "version": "1.0.0",
+  "description": "Ilita â€” personal AI entity. Tachikoma-style multi-instance cognition with BioLoop symbiosis and Kuze interaction layer.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "keywords": ["ilita", "nexus", "ai", "tachikoma"],
+  "author": "Brandon",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
+    "@supabase/supabase-js": "^2.104.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
+    "morgan": "^1.10.1",
+    "node-cron": "^4.2.1"
+  }
+}
