@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -29,6 +30,10 @@ app.use(helmet());
 app.use(cors());
 app.use(morgan('combined'));
 app.use(express.json({ limit: '2mb' }));
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'ilita-chat.html'));
+});
 
 // Routes
 app.use('/ilita', ilitaRoutes);
