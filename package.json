@@ -11,6 +11,9 @@
   "author": "Brandon",
   "license": "UNLICENSED",
   "private": true,
+  "engines": {
+    "node": "22"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",
     "@supabase/supabase-js": "^2.104.0",

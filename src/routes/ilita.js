@@ -9,9 +9,6 @@ const { initiateExchange, evaluateTriggers } = require('../services/triggerServi
 const { readPatterns } = require('../services/bioloopService');
 const supabase = require('../utils/supabase');
 
-// All routes require internal API key
-router.use(authenticate);
-
 // ============================================================
 // HEALTH
 // ============================================================
@@ -19,6 +16,9 @@ router.use(authenticate);
 router.get('/health', (req, res) => {
   res.json({ status: 'alive', entity: 'ilita', timestamp: new Date().toISOString() });
 });
+
+// All routes except health require internal API key
+router.use(authenticate);
 
 // ============================================================
 // CORE MESSAGE — Brandon or Kuze sends a message to Ilita
