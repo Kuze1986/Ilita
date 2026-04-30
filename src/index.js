@@ -26,7 +26,13 @@ if (missing.length > 0) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(helmet());
+app.use(
+  helmet({
+    // ilita-chat.html currently uses inline scripts/styles.
+    // Disable default CSP so the interface can execute in production.
+    contentSecurityPolicy: false
+  })
+);
 app.use(cors());
 app.use(morgan('combined'));
 app.use(express.json({ limit: '2mb' }));
