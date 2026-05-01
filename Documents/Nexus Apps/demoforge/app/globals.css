@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #050913;
+  --foreground: #e8ecff;
+  --panel: rgba(12, 20, 42, 0.72);
+  --panel-border: rgba(131, 173, 255, 0.24);
+  --muted: #95a4c5;
+  --accent: #2cf7df;
+  --accent-2: #89ff8c;
+  --danger: #ff5d7a;
 }
 
 @theme inline {
@@ -12,15 +18,39 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background:
+    radial-gradient(1200px 600px at 15% -10%, rgba(44, 247, 223, 0.18), transparent 60%),
+    radial-gradient(1000px 500px at 90% -20%, rgba(137, 255, 140, 0.14), transparent 55%),
+    linear-gradient(180deg, #050913 0%, #04070f 100%);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  min-height: 100vh;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+* {
+  border-color: color-mix(in srgb, var(--panel-border), transparent 35%);
+}
+
+.glass {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  backdrop-filter: blur(14px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 8px 30px rgba(0, 0, 0, 0.35);
+}
+
+.neon-text {
+  color: var(--accent);
+}
+
+.metric-gradient {
+  background:
+    linear-gradient(135deg, rgba(44, 247, 223, 0.2), rgba(137, 255, 140, 0.08) 65%, rgba(255, 255, 255, 0.02)),
+    var(--panel);
+}
+
+.soft-muted {
+  color: var(--muted);
 }

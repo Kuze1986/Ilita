@@ -1,9 +1,24 @@
+// Canonical Kuze narration source for DemoForge.
+// The KuzeChatPanel UI calls this route directly; AI Twin's
+// `/api/chat/demoforge` is intentionally kept as a backup adapter and is
+// wired into Crucible separately. Keep prompt construction in sync with
+// `lib/kuze/assembly.ts`; if behaviour diverges from AI Twin's
+// `server/src/promptBuilder.ts` ambassador mode, treat this file as the
+// authoritative source.
 import { NextResponse } from "next/server";
 import { getAnthropicClient, getAnthropicModel } from "@/lib/anthropic";
 import { logSystemEvent } from "@/lib/logging";
-import { KUZE_SYSTEM_PROMPT, type KuzeContext } from "@/lib/kuze";
+import { buildKuzeModelSystemPrompt } from "@/lib/kuze/assembly";
+import { type KuzeContext } from "@/lib/kuze";
 import { PRODUCT_LABELS } from "@/lib/constants";
-import { createServiceSupabaseClient } from "@/lib/supabase/server";
+import { createServiceSupabaseClient } from "@/lib/supabase/service";
+import { fetchCrucibleSessionState } from "@/lib/crucible/client";
+import { forwardSignalToCrucible } from "@/lib/behavior/signals";
+import {
+  getPersona,
+  PersonaInactiveError,
+  PersonaNotFoundError,
+} from "@/server/src/demoforge/getPersona";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import type { ProductKey } from "@/types/demo";
 
@@ -15,6 +30,20 @@ interface TranscriptEntry {
   timestamp: string;
 }
 
+function buildFallbackKuzeReply(input: {
+  ctx: KuzeContext;
+  userMessage: string;
+}): string {
+  const pains = input.ctx.painPoints.length
+    ? input.ctx.painPoints.join(", ")
+    : "onboarding consistency";
+  return [
+    `You're asking about ${input.ctx.productName} in the context of ${input.ctx.currentModuleTitle}.`,
+    `Given your priorities (${pains}), the practical next move is to define one measurable outcome for the first 30 days, then map module delivery to that metric.`,
+    `If you want, I can outline the exact rollout sequence for ${input.ctx.organization || "your team"} in three steps.`,
+  ].join(" ");
+}
+
 async function persistAfterChat(
   supabase: ReturnType<typeof createServiceSupabaseClient>,
   sessionId: string,
@@ -22,57 +51,114 @@ async function persistAfterChat(
   userMessage: string,
   assistantText: string
 ) {
-  const now = new Date().toISOString();
-  const userEntry: TranscriptEntry = {
-    role: "user",
-    content: userMessage,
-    timestamp: now,
-  };
-  const asstEntry: TranscriptEntry = {
-    role: "assistant",
-    content: assistantText,
-    timestamp: now,
-  };
+  let transcriptWriteFailed = false;
+  let eventWriteFailed = false;
 
-  const { data: kuzeRow } = await supabase
-    .from("kuze_sessions")
-    .select("id, transcript, message_count")
-    .eq("session_id", sessionId)
-    .is("ended_at", null)
-    .order("started_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  try {
+    const now = new Date().toISOString();
+    const userEntry: TranscriptEntry = {
+      role: "user",
+      content: userMessage,
+      timestamp: now,
+    };
+    const asstEntry: TranscriptEntry = {
+      role: "assistant",
+      content: assistantText,
+      timestamp: now,
+    };
 
-  const prev = (kuzeRow?.transcript as TranscriptEntry[] | null) ?? [];
-  const nextTranscript = [...prev, userEntry, asstEntry];
-  const nextCount = (kuzeRow?.message_count as number | null) ?? 0;
-  const messageCount = nextCount + 1;
-
-  if (kuzeRow?.id) {
-    const { error } = await supabase
+    const { data: kuzeRow, error: kuzeReadErr } = await supabase
       .from("kuze_sessions")
-      .update({
-        transcript: nextTranscript,
-        message_count: messageCount,
-      })
-      .eq("id", kuzeRow.id as string);
-    if (error) throw new Error(error.message);
-  } else {
-    const { error } = await supabase.from("kuze_sessions").insert({
+      .select("id, transcript, message_count")
+      .eq("session_id", sessionId)
+      .is("ended_at", null)
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (kuzeReadErr) {
+      transcriptWriteFailed = true;
+      await logSystemEvent({
+        function_name: "persist_after_chat",
+        session_id: sessionId,
+        status: "error",
+        message: kuzeReadErr.message,
+      });
+    } else {
+      const prev = (kuzeRow?.transcript as TranscriptEntry[] | null) ?? [];
+      const nextTranscript = [...prev, userEntry, asstEntry];
+      const nextCount = (kuzeRow?.message_count as number | null) ?? 0;
+      const messageCount = nextCount + 1;
+
+      if (kuzeRow?.id) {
+        const { error } = await supabase
+          .from("kuze_sessions")
+          .update({
+            transcript: nextTranscript,
+            message_count: messageCount,
+          })
+          .eq("id", kuzeRow.id as string);
+        if (error) {
+          transcriptWriteFailed = true;
+          await logSystemEvent({
+            function_name: "persist_after_chat",
+            session_id: sessionId,
+            status: "error",
+            message: error.message,
+          });
+        }
+      } else {
+        const { error } = await supabase.from("kuze_sessions").insert({
+          session_id: sessionId,
+          transcript: nextTranscript,
+          message_count: messageCount,
+        });
+        if (error) {
+          transcriptWriteFailed = true;
+          await logSystemEvent({
+            function_name: "persist_after_chat",
+            session_id: sessionId,
+            status: "error",
+            message: error.message,
+          });
+        }
+      }
+    }
+
+    const { error: evErr } = await supabase.from("session_events").insert({
       session_id: sessionId,
-      transcript: nextTranscript,
-      message_count: messageCount,
+      module_id: moduleId,
+      event_type: "kuze_message_sent",
+      metadata: { preview: assistantText.slice(0, 200) },
     });
-    if (error) throw new Error(error.message);
+    if (evErr) {
+      eventWriteFailed = true;
+      await logSystemEvent({
+        function_name: "persist_after_chat",
+        session_id: sessionId,
+        status: "error",
+        message: evErr.message,
+      });
+    }
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    transcriptWriteFailed = true;
+    await logSystemEvent({
+      function_name: "persist_after_chat",
+      session_id: sessionId,
+      status: "error",
+      message,
+    });
   }
 
-  const { error: evErr } = await supabase.from("session_events").insert({
-    session_id: sessionId,
-    module_id: moduleId,
-    event_type: "kuze_message_sent",
-    metadata: { preview: assistantText.slice(0, 200) },
-  });
-  if (evErr) throw new Error(evErr.message);
+  if (transcriptWriteFailed && eventWriteFailed) {
+    await logSystemEvent({
+      function_name: "persist_after_chat",
+      session_id: sessionId,
+      status: "error",
+      message: `Full persist failed for session ${sessionId}`,
+    });
+  }
 }
 
 export async function POST(request: Request) {
@@ -85,9 +171,19 @@ export async function POST(request: Request) {
     };
     const { sessionToken, message, conversationHistory } = body;
     if (!sessionToken || typeof sessionToken !== "string") {
+      await logSystemEvent({
+        function_name: "kuze_chat",
+        status: "error",
+        message: "sessionToken required",
+      });
       return NextResponse.json({ error: "sessionToken required" }, { status: 400 });
     }
     if (!message || typeof message !== "string") {
+      await logSystemEvent({
+        function_name: "kuze_chat",
+        status: "error",
+        message: "message required",
+      });
       return NextResponse.json({ error: "message required" }, { status: 400 });
     }
     const history = Array.isArray(conversationHistory) ? conversationHistory : [];
@@ -100,6 +196,11 @@ export async function POST(request: Request) {
       .single();
 
     if (sErr || !session) {
+      await logSystemEvent({
+        function_name: "kuze_chat",
+        status: "error",
+        message: "Session not found",
+      });
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
@@ -114,6 +215,12 @@ export async function POST(request: Request) {
       .eq("id", prospectId)
       .single();
     if (pErr || !prospect) {
+      await logSystemEvent({
+        function_name: "kuze_chat",
+        session_id: sessionIdForLog,
+        status: "error",
+        message: "Prospect not found",
+      });
       return NextResponse.json({ error: "Prospect not found" }, { status: 404 });
     }
 
@@ -123,6 +230,12 @@ export async function POST(request: Request) {
       .eq("id", trackId)
       .single();
     if (tErr || !track) {
+      await logSystemEvent({
+        function_name: "kuze_chat",
+        session_id: sessionIdForLog,
+        status: "error",
+        message: "Track not found",
+      });
       return NextResponse.json({ error: "Track not found" }, { status: 404 });
     }
 
@@ -134,6 +247,13 @@ export async function POST(request: Request) {
         .eq("id", moduleId)
         .single();
       if (mod?.title) moduleTitle = mod.title as string;
+    }
+
+    let crucibleState: Awaited<ReturnType<typeof fetchCrucibleSessionState>> = null;
+    try {
+      crucibleState = await fetchCrucibleSessionState({ sessionId: session.id as string });
+    } catch {
+      crucibleState = null;
     }
 
     const productKey = track.product as ProductKey;
@@ -149,7 +269,26 @@ export async function POST(request: Request) {
       productName: PRODUCT_LABELS[productKey] ?? productKey,
       trackName: (track.name as string) ?? "",
       currentModuleTitle: moduleTitle,
+      behavioralState: crucibleState,
     };
+
+    let persona;
+    try {
+      persona = await getPersona(supabase, productKey);
+    } catch (e) {
+      if (e instanceof PersonaNotFoundError || e instanceof PersonaInactiveError) {
+        await logSystemEvent({
+          function_name: "kuze_chat",
+          session_id: sessionIdForLog,
+          status: "error",
+          message: e.message,
+        });
+        return NextResponse.json({ error: e.message }, { status: 404 });
+      }
+      throw e;
+    }
+
+    const systemPrompt = buildKuzeModelSystemPrompt({ persona, kuzeContext: ctx });
 
     const anthropic = getAnthropicClient();
     const messages: MessageParam[] = [
@@ -162,12 +301,88 @@ export async function POST(request: Request) {
       { role: "user", content: message },
     ];
 
-    const modelStream = anthropic.messages.stream({
-      model: getAnthropicModel(),
-      max_tokens: 4096,
-      system: KUZE_SYSTEM_PROMPT(ctx),
-      messages,
-    });
+    const buildSseResponse = async (text: string) => {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          try {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ text })}\n\n`)
+            );
+            await persistAfterChat(
+              supabase,
+              sessionIdForLog!,
+              moduleId,
+              message,
+              text
+            );
+            await logSystemEvent({
+              function_name: "kuze_chat",
+              session_id: sessionIdForLog,
+              status: "success",
+              message: "Fallback response complete",
+            });
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            controller.close();
+            void forwardSignalToCrucible(
+              {
+                sessionId: sessionIdForLog,
+                renderId: null,
+                signalKind: "kuze_message",
+                payload: {
+                  journey_node_id: moduleId ?? "unknown",
+                  message_length: message.length,
+                  has_behavioral_state: crucibleState !== null,
+                },
+              },
+              "ambassador"
+            ).catch((error) => {
+              console.error(error);
+            });
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            await logSystemEvent({
+              function_name: "kuze_chat",
+              session_id: sessionIdForLog,
+              status: "error",
+              message: msg,
+            });
+            controller.error(e instanceof Error ? e : new Error(msg));
+          }
+        },
+      });
+
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+        },
+      });
+    };
+
+    let modelStream: ReturnType<typeof anthropic.messages.stream> | null = null;
+    try {
+      modelStream = anthropic.messages.stream({
+        model: getAnthropicModel(),
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (
+        msg.includes("authentication_error") ||
+        msg.includes("invalid x-api-key") ||
+        msg.includes("rate_limit_error") ||
+        msg.includes("overloaded_error") ||
+        msg.includes("timeout")
+      ) {
+        const fallbackText = buildFallbackKuzeReply({ ctx, userMessage: message });
+        return buildSseResponse(fallbackText);
+      }
+      throw e;
+    }
 
     const encoder = new TextEncoder();
     let assistantAccum = "";
@@ -204,8 +419,67 @@ export async function POST(request: Request) {
           });
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
+          void forwardSignalToCrucible(
+            {
+              sessionId: sessionIdForLog,
+              renderId: null,
+              signalKind: "kuze_message",
+              payload: {
+                journey_node_id: moduleId ?? "unknown",
+                message_length: message.length,
+                has_behavioral_state: crucibleState !== null,
+              },
+            },
+            "ambassador"
+          ).catch((error) => {
+            console.error(error);
+          });
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
+          if (
+            msg.includes("authentication_error") ||
+            msg.includes("invalid x-api-key") ||
+            msg.includes("rate_limit_error") ||
+            msg.includes("overloaded_error") ||
+            msg.includes("timeout")
+          ) {
+            const fallbackText = buildFallbackKuzeReply({ ctx, userMessage: message });
+            assistantAccum = fallbackText;
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ text: fallbackText })}\n\n`)
+            );
+            await persistAfterChat(
+              supabase,
+              sessionIdForLog!,
+              moduleId,
+              message,
+              assistantAccum
+            );
+            await logSystemEvent({
+              function_name: "kuze_chat",
+              session_id: sessionIdForLog,
+              status: "success",
+              message: "Fallback response complete",
+            });
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            controller.close();
+            void forwardSignalToCrucible(
+              {
+                sessionId: sessionIdForLog,
+                renderId: null,
+                signalKind: "kuze_message",
+                payload: {
+                  journey_node_id: moduleId ?? "unknown",
+                  message_length: message.length,
+                  has_behavioral_state: crucibleState !== null,
+                },
+              },
+              "ambassador"
+            ).catch((error) => {
+              console.error(error);
+            });
+            return;
+          }
           await logSystemEvent({
             function_name: "kuze_chat",
             session_id: sessionIdForLog,

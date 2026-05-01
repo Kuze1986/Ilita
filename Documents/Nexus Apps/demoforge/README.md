@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Demoforge
 
-## Getting Started
+Demoforge is a Next.js app configured for standalone production deploys.
 
-First, run the development server:
+## Local development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Railway deployment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+This repo is already configured for Railway via `railway.json`:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Build command: `npm run build`
+- Start command: `node scripts/start-standalone.cjs`
+- Healthcheck path: `/api/health`
 
-## Learn More
+### 1) Set environment variables in Railway
 
-To learn more about Next.js, take a look at the following resources:
+Copy values from `.env.example` and set them in your Railway service.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Minimum required for app boot and auth flows:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `NEXT_PUBLIC_APP_URL`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_KEY`
+- `ANTHROPIC_API_KEY`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
+- `ADMIN_EMAIL`
+- `ADMIN_CRON_SECRET`
 
-## Deploy on Vercel
+Optional integrations:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Stripe: `STRIPE_*`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+- Redis/video workers: `REDIS_URL`, `VIDEO_*`, `DEMOFORGE_*`, `ORCHESTRATOR_WEBHOOK_URL`
+- CRM: `HUBSPOT_PRIVATE_APP_TOKEN`, `SALESFORCE_INSTANCE_URL`
+- Crucible simulator: `CRUCIBLE_SIM_*`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 2) Deploy
+
+1. Connect the repository to Railway.
+2. Ensure service uses Node 22 (already set in `package.json` engines).
+3. Trigger deploy.
+
+### 3) Verify after deploy
+
+- Health endpoint returns 200: `GET /api/health`
+- App URL in `NEXT_PUBLIC_APP_URL` matches the Railway domain
+- Auth callback domain is allowed in Supabase settings

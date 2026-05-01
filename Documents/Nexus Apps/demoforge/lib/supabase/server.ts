@@ -1,7 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
-import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-import { DEMOFORGE_SCHEMA } from "./types";
+
+export {
+  createServiceSupabaseClient,
+  createServiceSupabaseClientForSchema,
+  createServiceSupabaseClientPublicSchema,
+} from "./service";
 
 export async function createServerSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -25,29 +29,5 @@ export async function createServerSupabaseClient() {
         }
       },
     },
-  });
-}
-
-export function createServiceSupabaseClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_KEY");
-  }
-  return createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    db: { schema: DEMOFORGE_SCHEMA },
-  });
-}
-
-/** Service client without default schema (e.g. auth schema). */
-export function createServiceSupabaseClientPublicSchema() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_KEY");
-  }
-  return createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
   });
 }

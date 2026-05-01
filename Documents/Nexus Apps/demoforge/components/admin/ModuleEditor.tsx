@@ -1,11 +1,12 @@
 "use client";
 
-import { useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import type { DemoModuleRow } from "@/types/demo";
 import type { ModuleType } from "@/types/demo";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import {
+  createCrucibleCompareModule,
   createModule,
   deleteModule,
   reorderModule,
@@ -20,6 +21,63 @@ const MODULE_TYPES: ModuleType[] = [
   "narration_card",
 ];
 
+interface CrucibleRunOption {
+  id: string;
+  label: string;
+}
+
+interface CrucibleModuleConfig {
+  provider: "crucible";
+  mode: "compare";
+  base_url: string;
+  selected_run_ids: string[];
+  available_runs: CrucibleRunOption[];
+}
+
+function parseCrucibleConfig(raw: Record<string, unknown> | null): CrucibleModuleConfig | null {
+  if (!raw || raw.provider !== "crucible") return null;
+  const selected = Array.isArray(raw.selected_run_ids)
+    ? raw.selected_run_ids.filter((x): x is string => typeof x === "string").slice(0, 4)
+    : [];
+  const options = Array.isArray(raw.available_runs)
+    ? raw.available_runs
+        .map((item) => {
+          if (!item || typeof item !== "object") return null;
+          const row = item as Record<string, unknown>;
+          if (typeof row.id !== "string") return null;
+          const label = typeof row.label === "string" ? row.label : row.id;
+          return { id: row.id, label };
+        })
+        .filter((x): x is CrucibleRunOption => Boolean(x))
+    : [];
+  const base = typeof raw.base_url === "string" ? raw.base_url : "";
+  return {
+    provider: "crucible",
+    mode: "compare",
+    base_url: base,
+    selected_run_ids: selected,
+    available_runs: options,
+  };
+}
+
+function buildCrucibleCompareUrl(baseUrl: string, runIds: string[]): string | null {
+  if (!baseUrl.trim()) return null;
+  const ids = runIds.filter(Boolean).slice(0, 4).join(",");
+  const url = new URL("/compare", baseUrl);
+  url.searchParams.set("ids", ids);
+  url.searchParams.set("embed", "1");
+  return url.toString();
+}
+
+function inferBaseUrlFromContent(contentUrl: string | null): string {
+  if (!contentUrl) return "";
+  try {
+    return new URL(contentUrl).origin;
+  } catch {
+    return "";
+  }
+}
+
 export function ModuleEditor({
   trackId,
   modules,
@@ -28,10 +86,48 @@ export function ModuleEditor({
   modules: DemoModuleRow[];
 }) {
   const [pending, startTransition] = useTransition();
+  const [crucibleRuns, setCrucibleRuns] = useState<CrucibleRunOption[]>([]);
+  const [runsLoaded, setRunsLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadRuns() {
+      try {
+        const res = await fetch("/api/admin/crucible/runs");
+        const data = (await res.json()) as { runs?: CrucibleRunOption[] };
+        if (!cancelled) {
+          setCrucibleRuns(Array.isArray(data.runs) ? data.runs : []);
+        }
+      } catch {
+        if (!cancelled) {
+          setCrucibleRuns([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setRunsLoaded(true);
+        }
+      }
+    }
+    void loadRuns();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button
+          variant="secondary"
+          disabled={pending}
+          onClick={() =>
+            startTransition(async () => {
+              await createCrucibleCompareModule(trackId);
+            })
+          }
+        >
+          Add Crucible compare
+        </Button>
         <Button
           disabled={pending}
           onClick={() =>
@@ -50,6 +146,68 @@ export function ModuleEditor({
       )}
       {modules.map((m, i) => (
         <Card key={m.id}>
+          {(() => {
+            const config = parseCrucibleConfig(m.interaction_config);
+            const selected = config?.selected_run_ids ?? [];
+            const available = crucibleRuns.length
+              ? crucibleRuns
+              : (config?.available_runs ?? []);
+
+            async function updateCrucibleRuns(next: string[]) {
+              const base =
+                config?.base_url ??
+                inferBaseUrlFromContent(m.content_url);
+              const nextConfig: CrucibleModuleConfig = {
+                provider: "crucible",
+                mode: "compare",
+                base_url: base,
+                selected_run_ids: next.filter(Boolean).slice(0, 4),
+                available_runs: available,
+              };
+              await updateModule(m.id, trackId, {
+                module_type: "iframe",
+                interaction_config: nextConfig as unknown as Record<string, unknown>,
+                content_url: buildCrucibleCompareUrl(base, nextConfig.selected_run_ids),
+              });
+            }
+
+            return config ? (
+              <div className="mb-4 rounded-lg border border-[color:var(--panel-border)] bg-[rgba(44,247,223,0.08)] p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[color:var(--accent)]">
+                  Crucible compare module
+                </p>
+                <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                  Select 1 to 4 runs. URL is generated automatically as /compare?ids=...&embed=1.
+                </p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {[0, 1, 2, 3].map((slot) => (
+                    <select
+                      key={slot}
+                      className="rounded border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-950"
+                      value={selected[slot] ?? ""}
+                      onChange={(e) => {
+                        const next = [...selected];
+                        next[slot] = e.target.value;
+                        const deduped = [...new Set(next.filter(Boolean))];
+                        startTransition(async () => {
+                          await updateCrucibleRuns(deduped);
+                        });
+                      }}
+                    >
+                      <option value="">
+                        {runsLoaded ? `Select run ${slot + 1}` : "Loading runs..."}
+                      </option>
+                      {available.map((run) => (
+                        <option key={run.id} value={run.id}>
+                          {run.label}
+                        </option>
+                      ))}
+                    </select>
+                  ))}
+                </div>
+              </div>
+            ) : null;
+          })()}
           <div className="mb-3 flex flex-wrap gap-2">
             <Button
               variant="secondary"

@@ -26,23 +26,23 @@ export function LeadCard({ item }: { item: LeadListItem }) {
   const products = (prospect.product_interest as ProductKey[] | null) ?? [];
 
   return (
-    <Card>
+    <Card className="metric-gradient">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="font-semibold">{name}</h3>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-sm soft-muted">
             {prospect.email}
           </p>
-          <p className="text-xs text-zinc-500">{prospect.organization ?? "—"}</p>
+          <p className="text-xs soft-muted">{prospect.organization ?? "—"}</p>
         </div>
         {latestSession && (
           <Badge tone={scoreTone(score)}>
-            Score {score != null ? score.toFixed(0) : "—"}
+            Score {score != null ? `${score.toFixed(0)}%` : "—"}
           </Badge>
         )}
       </div>
       {latestSession && (
-        <p className="mt-3 text-xs text-zinc-500">
+        <p className="mt-3 text-xs soft-muted">
           Last session: {latestSession.status} · {trackName ?? "Track"} ·{" "}
           {latestSession.started_at
             ? new Date(latestSession.started_at).toLocaleString()
@@ -56,7 +56,7 @@ export function LeadCard({ item }: { item: LeadListItem }) {
         </p>
       )}
       {prospect.routing_reason && (
-        <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
+        <p className="mt-2 text-xs soft-muted">
           Routing: {prospect.routing_reason}
         </p>
       )}

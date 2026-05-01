@@ -64,8 +64,11 @@ export default async function LeadsPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Leads</h1>
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <div>
+        <p className="text-xs uppercase tracking-[0.2em] soft-muted">Leads & Prospects</p>
+        <h1 className="text-2xl font-semibold">Leads</h1>
+      </div>
+      <p className="text-sm soft-muted">
         Prospects from intake, with latest demo session and BioLoop score.
       </p>
       <div className="flex flex-col gap-3">

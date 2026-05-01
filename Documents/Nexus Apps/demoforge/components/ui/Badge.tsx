@@ -1,10 +1,10 @@
 type Tone = "default" | "success" | "warning" | "muted";
 
 const tones: Record<Tone, string> = {
-  default: "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200",
-  success: "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200",
-  warning: "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200",
-  muted: "bg-zinc-50 text-zinc-500 dark:bg-zinc-800/50 dark:text-zinc-400",
+  default: "bg-[rgba(44,247,223,0.14)] text-[color:var(--accent)] border border-[rgba(44,247,223,0.35)]",
+  success: "bg-[rgba(137,255,140,0.15)] text-[color:var(--accent-2)] border border-[rgba(137,255,140,0.35)]",
+  warning: "bg-[rgba(255,198,74,0.15)] text-[#ffd776] border border-[rgba(255,198,74,0.35)]",
+  muted: "bg-[rgba(255,255,255,0.06)] text-[color:var(--muted)] border border-[rgba(255,255,255,0.14)]",
 };
 
 export function Badge({

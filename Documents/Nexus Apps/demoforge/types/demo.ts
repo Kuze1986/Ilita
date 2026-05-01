@@ -37,6 +37,8 @@ export interface DemoTrackRow {
   is_active: boolean | null;
   created_at: string;
   updated_at: string;
+  tenant_id?: string | null;
+  entry_node_id?: string | null;
 }
 
 export interface DemoModuleRow {

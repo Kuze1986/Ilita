@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
+import { JourneyBuilder } from "@/components/admin/JourneyBuilder";
 import { ModuleEditor } from "@/components/admin/ModuleEditor";
-import { createServiceSupabaseClient } from "@/lib/supabase/server";
+import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import type { DemoModuleRow, DemoTrackRow } from "@/types/demo";
+import type { JourneyEdgeRow, JourneyNodeRow } from "@/types/journey";
 
 export default async function TrackEditorPage({
   params,
@@ -31,6 +33,18 @@ export default async function TrackEditorPage({
     throw new Error(mErr.message);
   }
 
+  const { data: journeyNodes } = await supabase
+    .from("journey_nodes")
+    .select("*")
+    .eq("track_id", trackId)
+    .order("created_at", { ascending: true });
+
+  const { data: journeyEdges } = await supabase
+    .from("journey_edges")
+    .select("*")
+    .eq("track_id", trackId)
+    .order("priority", { ascending: true });
+
   const t = track as DemoTrackRow;
 
   return (
@@ -41,6 +55,13 @@ export default async function TrackEditorPage({
           {t.description ?? ""}
         </p>
       </div>
+      <JourneyBuilder
+        trackId={trackId}
+        entryNodeId={(t.entry_node_id as string | null) ?? null}
+        modules={(modules ?? []) as DemoModuleRow[]}
+        nodes={(journeyNodes ?? []) as JourneyNodeRow[]}
+        edges={(journeyEdges ?? []) as JourneyEdgeRow[]}
+      />
       <ModuleEditor
         trackId={trackId}
         modules={(modules ?? []) as DemoModuleRow[]}

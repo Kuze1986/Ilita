@@ -1,9 +1,10 @@
 import { after } from "next/server";
 import { NextResponse } from "next/server";
+import { dispatchIntegrationEvent } from "@/lib/integrations/index";
 import { logSystemEvent } from "@/lib/logging";
 import { generateAndSendFollowUp } from "@/lib/session-followup";
 import { applyScoreForSession } from "@/lib/session-score";
-import { createServiceSupabaseClient } from "@/lib/supabase/server";
+import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import type { SessionEventType } from "@/types/events";
 
 export const runtime = "nodejs";
@@ -18,6 +19,9 @@ const EVENT_TYPES: SessionEventType[] = [
   "cta_click",
   "demo_complete",
   "demo_drop",
+  "journey_branch_decision",
+  "video_view_start",
+  "video_watch_50",
 ];
 
 function isEventType(s: string): s is SessionEventType {
@@ -25,6 +29,8 @@ function isEventType(s: string): s is SessionEventType {
 }
 
 export async function POST(request: Request) {
+  let eventTypeForLog: string | undefined;
+  let sessionTokenForLog: string | undefined;
   try {
     const body = (await request.json()) as {
       sessionToken?: string;
@@ -33,10 +39,23 @@ export async function POST(request: Request) {
       metadata?: Record<string, unknown> | null;
     };
     const { sessionToken, moduleId, eventType, metadata } = body;
+    eventTypeForLog = eventType;
+    sessionTokenForLog = sessionToken;
     if (!sessionToken || typeof sessionToken !== "string") {
+      await logSystemEvent({
+        function_name: "track_event",
+        status: "error",
+        message: "sessionToken required",
+      });
       return NextResponse.json({ error: "sessionToken required" }, { status: 400 });
     }
     if (!eventType || !isEventType(eventType)) {
+      await logSystemEvent({
+        function_name: "track_event",
+        status: "error",
+        message: "Invalid eventType",
+        payload: { eventType: eventType ?? null },
+      });
       return NextResponse.json({ error: "Invalid eventType" }, { status: 400 });
     }
 
@@ -48,6 +67,12 @@ export async function POST(request: Request) {
       .single();
 
     if (sErr || !session) {
+      await logSystemEvent({
+        function_name: "track_event",
+        status: "error",
+        message: "Session not found",
+        payload: { eventType, sessionToken },
+      });
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
@@ -107,6 +132,23 @@ export async function POST(request: Request) {
       payload: { moduleId: moduleId ?? null, metadata: metadata ?? null },
     });
 
+    if (
+      eventType === "module_complete" ||
+      eventType === "demo_complete" ||
+      eventType === "cta_click" ||
+      eventType === "journey_branch_decision"
+    ) {
+      await dispatchIntegrationEvent({
+        tenantId: null,
+        eventType: `demo.${eventType}`,
+        body: {
+          sessionId,
+          moduleId: moduleId ?? null,
+          metadata: metadata ?? null,
+        },
+      });
+    }
+
     if (eventType === "demo_complete") {
       after(async () => {
         try {
@@ -157,6 +199,10 @@ export async function POST(request: Request) {
       function_name: "track_event",
       status: "error",
       message,
+      payload: {
+        eventType: eventTypeForLog ?? null,
+        sessionToken: sessionTokenForLog ?? null,
+      },
     });
     return NextResponse.json({ error: message }, { status: 500 });
   }

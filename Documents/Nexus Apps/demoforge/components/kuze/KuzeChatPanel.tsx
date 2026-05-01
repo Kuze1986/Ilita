@@ -109,18 +109,23 @@ export function KuzeChatPanel({ sessionToken }: { sessionToken: string }) {
   }, [input, messages, scrollDown, sessionToken, streaming]);
 
   return (
-    <Card className="flex h-[min(640px,80vh)] flex-col">
-      <div className="mb-3 flex items-center gap-2 border-b border-zinc-200 pb-3 dark:border-zinc-700">
-        <KuzeAvatar size={40} />
+    <Card className="flex h-[min(560px,86vh)] flex-col p-3 sm:h-[min(620px,84vh)] sm:p-4 md:h-[min(680px,82vh)]">
+      <div className="mb-3 flex items-center gap-2 border-b border-[color:var(--panel-border)] pb-3">
+        <span className="block sm:hidden">
+          <KuzeAvatar size={32} />
+        </span>
+        <span className="hidden sm:block">
+          <KuzeAvatar size={40} />
+        </span>
         <div>
           <p className="text-sm font-semibold">Kuze</p>
-          <p className="text-xs text-zinc-500">NEXUS Holdings</p>
+          <p className="text-[11px] soft-muted sm:text-xs">NEXUS Holdings</p>
         </div>
       </div>
 
       <div className="flex flex-1 flex-col gap-3 overflow-y-auto py-2">
         {messages.length === 0 && (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm soft-muted">
             Ask anything about the demo, products, or your use case.
           </p>
         )}
@@ -129,12 +134,21 @@ export function KuzeChatPanel({ sessionToken }: { sessionToken: string }) {
             key={i}
             className={`flex gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}
           >
-            {m.role === "assistant" && <KuzeAvatar size={32} />}
+            {m.role === "assistant" && (
+              <>
+                <span className="block sm:hidden">
+                  <KuzeAvatar size={24} />
+                </span>
+                <span className="hidden sm:block">
+                  <KuzeAvatar size={32} />
+                </span>
+              </>
+            )}
             <div
-              className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${
+              className={`max-w-[90%] rounded-xl px-3 py-2 text-sm sm:max-w-[85%] ${
                 m.role === "user"
-                  ? "bg-foreground text-background"
-                  : "bg-zinc-100 text-foreground dark:bg-zinc-800"
+                  ? "bg-[color:var(--accent)] text-[#031218]"
+                  : "bg-[rgba(255,255,255,0.08)] text-foreground"
               }`}
             >
               <p className="whitespace-pre-wrap">{m.content}</p>
@@ -144,7 +158,7 @@ export function KuzeChatPanel({ sessionToken }: { sessionToken: string }) {
         {streaming &&
           messages[messages.length - 1]?.role === "assistant" &&
           messages[messages.length - 1]?.content === "" && (
-            <div className="flex items-center gap-2 text-zinc-500">
+            <div className="flex items-center gap-2 soft-muted">
               <LoadingSpinner className="h-5 w-5" />
               <span className="text-xs">Kuze is thinking…</span>
             </div>
@@ -153,12 +167,12 @@ export function KuzeChatPanel({ sessionToken }: { sessionToken: string }) {
       </div>
 
       {error && (
-        <p className="mb-2 text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p className="mb-2 text-sm text-[color:var(--danger)]">{error}</p>
       )}
 
-      <div className="mt-2 flex gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-700">
+      <div className="mt-2 flex flex-col gap-2 border-t border-[color:var(--panel-border)] pt-3 sm:flex-row">
         <input
-          className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950"
+          className="min-w-0 flex-1 rounded-xl border border-[color:var(--panel-border)] bg-black/20 px-3 py-2 text-base outline-none focus:border-[color:var(--accent)] sm:text-sm"
           placeholder="Message Kuze…"
           value={input}
           disabled={streaming}
@@ -170,7 +184,11 @@ export function KuzeChatPanel({ sessionToken }: { sessionToken: string }) {
             }
           }}
         />
-        <Button disabled={streaming || !input.trim()} onClick={() => void send()}>
+        <Button
+          className="w-full sm:w-auto"
+          disabled={streaming || !input.trim()}
+          onClick={() => void send()}
+        >
           Send
         </Button>
       </div>

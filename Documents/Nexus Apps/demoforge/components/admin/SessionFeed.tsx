@@ -69,7 +69,7 @@ export function SessionFeed({ initial }: { initial: SessionFeedItem[] }) {
   if (initial.length === 0) {
     return (
       <Card>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm soft-muted">
           No sessions yet. Complete an intake on the public demo to see activity
           here.
         </p>
@@ -80,12 +80,12 @@ export function SessionFeed({ initial }: { initial: SessionFeedItem[] }) {
   return (
     <Card className="overflow-x-auto p-0">
       <table className="w-full min-w-[640px] text-left text-sm">
-        <thead className="border-b border-zinc-200 bg-zinc-50 text-xs text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+        <thead className="border-b border-[color:var(--panel-border)] bg-[rgba(255,255,255,0.03)] text-xs soft-muted">
           <tr>
             <th className="px-4 py-2">Prospect</th>
-            <th className="px-4 py-2">Product / track</th>
-            <th className="px-4 py-2">Status</th>
-            <th className="px-4 py-2">Score</th>
+            <th className="px-4 py-2">Track</th>
+            <th className="px-4 py-2">Delivery</th>
+            <th className="px-4 py-2">Naturalness</th>
             <th className="px-4 py-2">Started</th>
             <th className="px-4 py-2">Action</th>
           </tr>
@@ -103,25 +103,25 @@ export function SessionFeed({ initial }: { initial: SessionFeedItem[] }) {
             return (
               <tr
                 key={row.id}
-                className="border-b border-zinc-100 dark:border-zinc-800"
+                className="border-b border-[color:var(--panel-border)]/40"
               >
                 <td className="px-4 py-3">
                   <div className="font-medium">{name}</div>
-                  <div className="text-xs text-zinc-500">
+                  <div className="text-xs soft-muted">
                     {row.prospect?.organization ?? "—"}
                   </div>
                 </td>
                 <td className="px-4 py-3 text-xs">
-                  <div>{row.track_product ?? "—"}</div>
-                  <div className="text-zinc-500">{row.track_name ?? ""}</div>
+                  <div>{row.track_name ?? "Prospect"}</div>
+                  <div className="soft-muted">{row.track_product ?? "—"}</div>
                 </td>
                 <td className="px-4 py-3">{statusBadge(row.status)}</td>
                 <td className="px-4 py-3">
                   <Badge tone={scoreTone(score)}>
-                    {score != null ? score.toFixed(0) : "—"}
+                    Naturalness {score != null ? `${score.toFixed(1)}%` : "—"}
                   </Badge>
                 </td>
-                <td className="px-4 py-3 text-xs text-zinc-500">
+                <td className="px-4 py-3 text-xs soft-muted">
                   {row.started_at
                     ? new Date(row.started_at).toLocaleString()
                     : "—"}

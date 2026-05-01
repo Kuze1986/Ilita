@@ -1,5 +1,6 @@
 import { SessionFeed } from "@/components/admin/SessionFeed";
 import { Card } from "@/components/ui/Card";
+import { StatTile } from "@/components/ui/system/StatTile";
 import { SCORING_RULES_DESCRIPTION } from "@/lib/constants";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import type { SessionFeedItem } from "@/types/admin";
@@ -111,39 +112,19 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-2xl font-semibold">Dashboard</h1>
+      <div>
+        <p className="text-xs uppercase tracking-[0.2em] soft-muted">Control Center</p>
+        <h1 className="text-2xl font-semibold">Dashboard</h1>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <p className="text-xs font-medium uppercase text-zinc-500">
-            Sessions today
-          </p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">{started}</p>
-        </Card>
-        <Card>
-          <p className="text-xs font-medium uppercase text-zinc-500">
-            Completion rate
-          </p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">
-            {completionRate}%
-          </p>
-        </Card>
-        <Card>
-          <p className="text-xs font-medium uppercase text-zinc-500">
-            Avg engagement
-          </p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">
-            {avgEngagement != null ? avgEngagement.toFixed(1) : "—"}
-          </p>
-        </Card>
-        <Card>
-          <p className="text-xs font-medium uppercase text-zinc-500">
-            Follow-ups sent
-          </p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">
-            {followUpsToday ?? 0}
-          </p>
-        </Card>
+        <StatTile label="Sessions today" value={started} />
+        <StatTile label="Completion rate" value={`${completionRate}%`} />
+        <StatTile
+          label="Avg engagement"
+          value={avgEngagement != null ? avgEngagement.toFixed(1) : "—"}
+        />
+        <StatTile label="Follow-ups sent" value={followUpsToday ?? 0} />
       </div>
 
       <section>

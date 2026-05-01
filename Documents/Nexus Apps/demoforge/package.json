@@ -2,20 +2,32 @@
   "name": "demoforge",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "22"
+  },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "build": "next build && node scripts/postbuild-standalone.mjs",
+    "start": "node scripts/start-standalone.cjs",
+    "lint": "eslint",
+    "video:worker": "tsx --tsconfig tsconfig.json services/video-pipeline/src/worker.ts",
+    "test:e2e:demo": "playwright test tests/e2e/demo-smoke.spec.ts",
+    "check:telemetry": "node scripts/check-track-event-contract.mjs",
+    "check:demo-links": "node scripts/check-demo-links.mjs",
+    "audit:non-manual": "npm run check:telemetry && npm run check:demo-links"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.86.1",
+    "@playwright/test": "^1.59.1",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.0",
+    "bullmq": "^5.76.2",
+    "ioredis": "^5.10.1",
     "next": "16.2.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "resend": "^6.10.0"
+    "resend": "^6.10.0",
+    "stripe": "^17.7.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -25,6 +37,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

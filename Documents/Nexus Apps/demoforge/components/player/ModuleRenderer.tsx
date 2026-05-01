@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { DemoModuleRow } from "@/types/demo";
 import { Button } from "@/components/ui/Button";
 
@@ -33,14 +34,72 @@ export function ModuleRenderer({
   onComplete,
   onSkip,
   onCta,
+  onVideoWatchHalf,
+  onReplay,
+  onVideoStart,
 }: {
   module: DemoModuleRow;
   onComplete: () => void | Promise<void>;
   onSkip: () => void | Promise<void>;
   onCta: (metadata?: Record<string, unknown>) => void | Promise<void>;
+  onVideoWatchHalf?: () => void | Promise<void>;
+  onReplay?: () => void | Promise<void>;
+  onVideoStart?: () => void | Promise<void>;
 }) {
   const skippable = module.is_skippable !== false;
   const ctas = parseCtas(module.interaction_config);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const halfWatchedRef = useRef(false);
+  const startedRef = useRef(false);
+  const [isLoadingVideo, setIsLoadingVideo] = useState(module.module_type === "video");
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  const [videoEnded, setVideoEnded] = useState(false);
+
+  const captionsUrl = useMemo(() => {
+    if (!module.interaction_config) return null;
+    const raw = module.interaction_config as Record<string, unknown>;
+    const candidate = raw.captions_url ?? raw.captionsUrl;
+    return typeof candidate === "string" && candidate.trim() ? candidate : null;
+  }, [module.interaction_config]);
+
+  useEffect(() => {
+    halfWatchedRef.current = false;
+    startedRef.current = false;
+    setVideoError(null);
+    setAutoplayBlocked(false);
+    setIsLoadingVideo(module.module_type === "video");
+    setVideoEnded(false);
+  }, [module.id, module.module_type]);
+
+  useEffect(() => {
+    if (module.module_type !== "video") return;
+    const node = videoRef.current;
+    if (!node) return;
+    node.muted = true;
+    const playPromise = node.play();
+    if (playPromise) {
+      playPromise.catch(() => {
+        setAutoplayBlocked(true);
+      });
+    }
+  }, [module.id, module.module_type]);
+
+  async function handleHalfWatch() {
+    if (halfWatchedRef.current) return;
+    halfWatchedRef.current = true;
+    if (onVideoWatchHalf) {
+      await onVideoWatchHalf();
+    }
+  }
+
+  async function handleVideoStart() {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    if (onVideoStart) {
+      await onVideoStart();
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -55,12 +114,79 @@ export function ModuleRenderer({
 
       {module.module_type === "video" &&
         (module.content_url ? (
-          <video
-            className="w-full max-w-3xl rounded-lg bg-black"
-            src={module.content_url}
-            controls
-            onEnded={() => void Promise.resolve(onComplete())}
-          />
+          <div className="relative w-full max-w-3xl">
+            <video
+              ref={videoRef}
+              className="w-full rounded-lg bg-black"
+              src={module.content_url}
+              controls
+              autoPlay
+              muted
+              playsInline
+              preload="metadata"
+              onLoadStart={() => {
+                setIsLoadingVideo(true);
+                setVideoError(null);
+              }}
+              onLoadedData={() => setIsLoadingVideo(false)}
+              onCanPlay={() => setIsLoadingVideo(false)}
+              onTimeUpdate={(event) => {
+                const node = event.currentTarget;
+                if (!Number.isFinite(node.duration) || node.duration <= 0) return;
+                if (node.currentTime >= node.duration * 0.5) {
+                  void handleHalfWatch();
+                }
+              }}
+              onEnded={() => {
+                setVideoEnded(true);
+              }}
+              onPlay={() => setVideoEnded(false)}
+              onPlayCapture={() => {
+                void handleVideoStart();
+              }}
+              onError={() => {
+                setIsLoadingVideo(false);
+                setVideoError("Video failed to load. Please retry or continue manually.");
+              }}
+            >
+              {captionsUrl && (
+                <track kind="captions" src={captionsUrl} srcLang="en" label="English" default />
+              )}
+            </video>
+            {isLoadingVideo && (
+              <div className="absolute inset-0 grid place-items-center rounded-lg bg-black/50">
+                <span className="text-sm text-white">Loading video...</span>
+              </div>
+            )}
+            {autoplayBlocked && !videoError && (
+              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                Autoplay was blocked by your browser. Press play to continue.
+              </p>
+            )}
+            {videoError && (
+              <p className="mt-2 text-sm text-red-700 dark:text-red-300">{videoError}</p>
+            )}
+            {videoEnded && (
+              <div className="mt-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    const node = videoRef.current;
+                    if (!node) return;
+                    node.currentTime = 0;
+                    void node.play().catch(() => {
+                      setAutoplayBlocked(true);
+                    });
+                    if (onReplay) {
+                      void Promise.resolve(onReplay());
+                    }
+                  }}
+                >
+                  Replay video
+                </Button>
+              </div>
+            )}
+          </div>
         ) : (
           <p className="text-sm text-amber-800 dark:text-amber-200">
             No video URL configured for this module.

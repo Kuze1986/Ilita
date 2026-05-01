@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getAdminActor } from "@/lib/governance/requireAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -9,56 +9,104 @@ export default async function ProtectedAdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/admin/login");
-  }
-
-  const adminEmail = process.env.ADMIN_EMAIL;
-  if (adminEmail && user.email !== adminEmail) {
+  const actor = await getAdminActor();
+  if (!actor) {
     redirect("/admin/login?error=forbidden");
   }
 
   return (
-    <div className="min-h-full">
-      <header className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3">
-          <Link href="/admin" className="font-semibold">
-            DemoForge admin
+    <div className="min-h-full lg:grid lg:grid-cols-[260px_1fr]">
+      <aside className="glass border-r border-[color:var(--panel-border)] p-4 lg:min-h-screen">
+        <div className="mb-6">
+          <p className="text-xs uppercase tracking-[0.24em] soft-muted">DemoForge</p>
+          <h1 className="mt-1 text-xl font-semibold">Control Nexus</h1>
+        </div>
+        <nav className="flex flex-col gap-2 text-sm">
+          <Link
+            href="/admin"
+            className="rounded-xl px-3 py-2 text-foreground hover:bg-[rgba(44,247,223,0.12)]"
+          >
+            Dashboard
           </Link>
-          <nav className="flex flex-wrap gap-3 text-sm">
+          <Link
+            href="/admin/tracks"
+            className="rounded-xl px-3 py-2 text-foreground hover:bg-[rgba(44,247,223,0.12)]"
+          >
+            Tracks
+          </Link>
+          <Link
+            href="/admin/tracks/templates"
+            className="rounded-xl px-3 py-2 text-foreground hover:bg-[rgba(44,247,223,0.12)]"
+          >
+            Journey templates
+          </Link>
+          <Link
+            href="/admin/leads"
+            className="rounded-xl px-3 py-2 text-foreground hover:bg-[rgba(44,247,223,0.12)]"
+          >
+            Leads
+          </Link>
+          <Link
+            href="/admin/videos"
+            className="rounded-xl px-3 py-2 text-foreground hover:bg-[rgba(44,247,223,0.12)]"
+          >
+            Video Ops
+          </Link>
+          <Link
+            href="/admin/control-plane"
+            className="rounded-xl px-3 py-2 text-foreground hover:bg-[rgba(44,247,223,0.12)]"
+          >
+            Control plane
+          </Link>
+          <Link
+            href="/admin/integrations"
+            className="rounded-xl px-3 py-2 text-foreground hover:bg-[rgba(44,247,223,0.12)]"
+          >
+            Integrations
+          </Link>
+          <Link
+            href="/demo?admin_mode=1"
+            className="rounded-xl px-3 py-2 text-foreground hover:bg-[rgba(44,247,223,0.12)]"
+          >
+            Switch to client mode
+          </Link>
+        </nav>
+      </aside>
+      <section className="px-4 py-6 lg:px-8">
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] soft-muted">Admin Workspace</p>
+            <p className="text-lg font-semibold">Operational dashboard</p>
+          </div>
+          <nav className="flex flex-wrap gap-2 text-sm">
             <Link
               href="/admin"
-              className="text-zinc-600 hover:text-foreground dark:text-zinc-400"
+              className="glass rounded-xl px-3 py-2 hover:bg-[rgba(44,247,223,0.12)]"
             >
               Dashboard
             </Link>
             <Link
               href="/admin/tracks"
-              className="text-zinc-600 hover:text-foreground dark:text-zinc-400"
+              className="glass rounded-xl px-3 py-2 hover:bg-[rgba(44,247,223,0.12)]"
             >
               Tracks
             </Link>
             <Link
               href="/admin/leads"
-              className="text-zinc-600 hover:text-foreground dark:text-zinc-400"
+              className="glass rounded-xl px-3 py-2 hover:bg-[rgba(44,247,223,0.12)]"
             >
               Leads
             </Link>
             <Link
-              href="/demo"
-              className="text-zinc-600 hover:text-foreground dark:text-zinc-400"
+              href="/demo?admin_mode=1"
+              className="rounded-xl border border-[color:var(--accent)]/40 bg-[rgba(44,247,223,0.12)] px-3 py-2 text-[color:var(--accent)]"
             >
-              Public demo
+              Client mode
             </Link>
           </nav>
-        </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+        </header>
+        <main className="mx-auto max-w-7xl">{children}</main>
+      </section>
     </div>
   );
 }

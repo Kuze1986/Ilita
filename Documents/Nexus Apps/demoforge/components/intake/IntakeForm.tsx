@@ -14,7 +14,13 @@ import { RoutingLoader } from "./RoutingLoader";
 
 const STEPS = 4;
 
-export function IntakeForm() {
+export function IntakeForm({
+  initialUtm = {},
+  adminMode = false,
+}: {
+  initialUtm?: Record<string, string>;
+  adminMode?: boolean;
+}) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -62,10 +68,29 @@ export function IntakeForm() {
     return false;
   }
 
+  function handleBack() {
+    if (step > 1) {
+      setStep((s) => Math.max(1, s - 1));
+      return;
+    }
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push("/");
+  }
+
   async function submit() {
     setError(null);
     setLoading(true);
     try {
+      const utm = {
+        utm_source: initialUtm.utm_source ?? "",
+        utm_medium: initialUtm.utm_medium ?? "",
+        utm_campaign: initialUtm.utm_campaign ?? "",
+        utm_term: initialUtm.utm_term ?? "",
+        utm_content: initialUtm.utm_content ?? "",
+      };
       const res = await fetch("/api/route-prospect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -78,6 +103,7 @@ export function IntakeForm() {
           orgType,
           painPoints,
           productInterest,
+          utm,
         }),
       });
       const data = (await res.json()) as {
@@ -98,7 +124,16 @@ export function IntakeForm() {
       if (!data.sessionId || !data.sessionToken) {
         throw new Error("Missing session from server");
       }
-      router.push(`/demo/${data.sessionId}?token=${encodeURIComponent(data.sessionToken)}`);
+      const nextParams = new URLSearchParams({
+        token: data.sessionToken,
+      });
+      for (const [key, value] of Object.entries(utm)) {
+        if (value) nextParams.set(key, value);
+      }
+      if (adminMode) {
+        nextParams.set("admin_mode", "1");
+      }
+      router.push(`/demo/${data.sessionId}?${nextParams.toString()}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
       setLoading(false);
@@ -241,11 +276,7 @@ export function IntakeForm() {
       )}
 
       <div className="mt-8 flex justify-between gap-2">
-        <Button
-          variant="secondary"
-          disabled={step === 1}
-          onClick={() => setStep((s) => Math.max(1, s - 1))}
-        >
+        <Button variant="secondary" onClick={handleBack}>
           Back
         </Button>
         {step < STEPS ? (

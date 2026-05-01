@@ -19,19 +19,22 @@ export default async function TracksPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Demo tracks</h1>
+      <div>
+        <p className="text-xs uppercase tracking-[0.2em] soft-muted">Tracks & Personas</p>
+        <h1 className="text-2xl font-semibold">Demo tracks</h1>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {list.map((t) => (
           <Link key={t.id} href={`/admin/tracks/${t.id}`}>
-            <Card className="h-full transition hover:border-zinc-400 dark:hover:border-zinc-600">
-              <p className="text-xs font-medium uppercase text-zinc-500">
+            <Card className="metric-gradient h-full transition hover:bg-[rgba(44,247,223,0.1)]">
+              <p className="text-xs font-medium uppercase soft-muted">
                 {PRODUCT_LABELS[t.product as ProductKey] ?? t.product}
               </p>
               <h2 className="mt-1 font-semibold">{t.name}</h2>
-              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="mt-2 text-sm soft-muted">
                 {t.description ?? "—"}
               </p>
-              <p className="mt-2 text-xs text-zinc-500">
+              <p className="mt-2 text-xs soft-muted">
                 Persona: {t.persona} ·{" "}
                 {t.is_active ? "Active" : "Inactive"}
               </p>

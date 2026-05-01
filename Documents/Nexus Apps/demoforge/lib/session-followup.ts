@@ -1,19 +1,68 @@
 import { getAnthropicClient, getAnthropicModel } from "@/lib/anthropic";
 import { logSystemEvent } from "@/lib/logging";
+import { buildKuzeFollowupSystemPrompt } from "@/lib/kuze/assembly";
 import { KUZE_SYSTEM_PROMPT, type KuzeContext } from "@/lib/kuze";
 import { stripJsonFence } from "@/lib/routing";
 import { getResendClient, getResendFrom, wrapEmailHtml } from "@/lib/resend";
 import { PRODUCT_LABELS } from "@/lib/constants";
-import { createServiceSupabaseClient } from "@/lib/supabase/server";
+import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import type { ProductKey } from "@/types/demo";
 import type { ScoreBreakdown } from "@/lib/scoring";
+import { dispatchIntegrationEvent } from "@/lib/integrations/index";
+import { getBestCompletedRenderForSession } from "@/lib/video/render-select";
+import {
+  getPersona,
+  PersonaInactiveError,
+  PersonaNotFoundError,
+} from "@/server/src/demoforge/getPersona";
 
 interface FollowUpJson {
   subject: string;
   body_html: string;
 }
 
-export async function generateAndSendFollowUp(sessionId: string): Promise<void> {
+function buildFallbackFollowUp(input: {
+  name: string;
+  org: string;
+  productName: string;
+  trackName: string;
+  score: number;
+  painPoints: string[];
+  modulesDone: number;
+  modulesTotal: number;
+  videoUrl: string | null;
+}): FollowUpJson {
+  const scoreBand =
+    input.score >= 80
+      ? "high-priority"
+      : input.score >= 50
+        ? "strong"
+        : input.score >= 20
+          ? "early-stage"
+          : "exploratory";
+  const painLine = input.painPoints.length
+    ? input.painPoints.join(", ")
+    : "onboarding speed and training consistency";
+  const replayLine = input.videoUrl
+    ? `<p>If it helps, here is your replay link: <a href="${input.videoUrl}">${input.videoUrl}</a>.</p>`
+    : "<p>If you want, I can send a focused replay aligned to your team goals.</p>";
+  return {
+    subject: `${input.name.split(" ")[0] || "Quick"} — next step after your ${input.productName} demo`,
+    body_html: [
+      `<p>${input.name},</p>`,
+      `<p>Thanks for reviewing ${input.productName} (${input.trackName}). Based on your session (${input.modulesDone}/${input.modulesTotal} modules, ${scoreBand} engagement), the most relevant next step is mapping your current workflow at ${input.org || "your organization"} to a rollout plan.</p>`,
+      `<p>You flagged ${painLine}. We can directly map those gaps to a 30-day execution path with owners, milestones, and measurable outcomes.</p>`,
+      replayLine,
+      "<p>If useful, reply with two time windows this week and I will prepare a concrete implementation blueprint before the call.</p>",
+      "<p>— Kuze</p>",
+    ].join(""),
+  };
+}
+
+export async function generateAndSendFollowUp(
+  sessionId: string,
+  options?: { preferredVideoUrl?: string | null }
+): Promise<void> {
   const supabase = createServiceSupabaseClient();
 
   const { data: session, error: sErr } = await supabase
@@ -94,29 +143,68 @@ export async function generateAndSendFollowUp(sessionId: string): Promise<void> 
   };
 
   const anthropic = getAnthropicClient();
+  const bestRender = options?.preferredVideoUrl
+    ? { finalVideoPath: options.preferredVideoUrl, renderId: "external", naturalnessScore: null }
+    : await getBestCompletedRenderForSession(sessionId);
+  const videoLine = bestRender
+    ? `Video recap URL: ${bestRender.finalVideoPath}. Mention this as a quick replay option.`
+    : "No video recap URL available. Offer a fallback to the live demo link.";
   const userPrompt = `You are Kuze. Write a follow-up email to ${name} at ${org}.
 They just watched the ${productName} demo (${track.name as string}). Their engagement score was ${score}.
 Score breakdown (JSON): ${JSON.stringify(breakdown ?? {})}.
 Pain points: ${pain}. Modules completed: ${modulesDone}/${modulesTotal}.
+${videoLine}
 Personalize the email — reference what they saw, map it to their pain,
 and close with a specific next step.
 Return ONLY JSON: {"subject":"...","body_html":"..."} where body_html is concise HTML (p, strong, ul allowed).`;
 
-  const msg = await anthropic.messages.create({
-    model: getAnthropicModel(),
-    max_tokens: 2048,
-    system: KUZE_SYSTEM_PROMPT(kuzeCtx),
-    messages: [{ role: "user", content: userPrompt }],
-  });
-  const block = msg.content.find((b) => b.type === "text");
-  if (!block || block.type !== "text") {
-    throw new Error("Follow-up: no text from model");
+  let systemPrompt = KUZE_SYSTEM_PROMPT(kuzeCtx);
+  try {
+    const persona = await getPersona(supabase, productKey);
+    systemPrompt = buildKuzeFollowupSystemPrompt({ persona, kuzeContext: kuzeCtx });
+  } catch (e) {
+    if (!(e instanceof PersonaNotFoundError || e instanceof PersonaInactiveError)) {
+      throw e;
+    }
   }
+
   let parsed: FollowUpJson;
   try {
+    const msg = await anthropic.messages.create({
+      model: getAnthropicModel(),
+      max_tokens: 2048,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+    });
+    const block = msg.content.find((b) => b.type === "text");
+    if (!block || block.type !== "text") {
+      throw new Error("Follow-up: no text from model");
+    }
     parsed = JSON.parse(stripJsonFence(block.text)) as FollowUpJson;
-  } catch {
-    throw new Error("Follow-up: invalid JSON from model");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (
+      message.includes("authentication_error") ||
+      message.includes("invalid x-api-key") ||
+      message.includes("rate_limit_error") ||
+      message.includes("overloaded_error") ||
+      message.includes("timeout") ||
+      message.includes("invalid JSON")
+    ) {
+      parsed = buildFallbackFollowUp({
+        name,
+        org,
+        productName,
+        trackName: (track.name as string) ?? productName,
+        score: Number(score),
+        painPoints: (prospect.pain_points as string[] | null) ?? [],
+        modulesDone,
+        modulesTotal,
+        videoUrl: bestRender?.finalVideoPath ?? null,
+      });
+    } else {
+      throw error;
+    }
   }
   if (!parsed.subject || !parsed.body_html) {
     throw new Error("Follow-up: missing subject or body_html");
@@ -130,7 +218,21 @@ Return ONLY JSON: {"subject":"...","body_html":"..."} where body_html is concise
     html: wrapEmailHtml(parsed.body_html),
   });
   if (sendErr) {
-    throw new Error(sendErr.message);
+    const sendErrorMessage = sendErr.message;
+    await supabase.from("follow_ups").insert({
+      session_id: sessionId,
+      prospect_id: prospectId,
+      subject: parsed.subject,
+      body_html: parsed.body_html,
+      error: sendErrorMessage,
+    });
+    await logSystemEvent({
+      function_name: "send_followup",
+      session_id: sessionId,
+      status: "error",
+      message: sendErrorMessage,
+    });
+    throw new Error(sendErrorMessage);
   }
 
   const messageId =
@@ -167,5 +269,17 @@ Return ONLY JSON: {"subject":"...","body_html":"..."} where body_html is concise
     status: "success",
     message: "Email sent",
     payload: { resend_message_id: messageId },
+  });
+
+  await dispatchIntegrationEvent({
+    tenantId: null,
+    eventType: "followup.sent",
+    idempotencyKey: `followup:${sessionId}`,
+    body: {
+      sessionId,
+      prospectId,
+      resendMessageId: messageId,
+      subject: parsed.subject,
+    },
   });
 }
