@@ -1,6 +1,7 @@
 const anthropic = require('../utils/anthropic');
 const { getSystemPrompt } = require('../utils/systemPrompt');
 const supabase = require('../utils/supabase');
+const { pickInstance } = require('../utils/instanceSelector');
 
 const MODEL = 'claude-sonnet-4-20250514';
 const DEFAULT_MAX_TURNS = 6;
@@ -28,6 +29,7 @@ Be direct. Be specific. Push back when you disagree.`;
  * @param {number} opts.maxTurns       - Max turns before forcing conclusion (default 6)
  * @param {string} opts.context        - Optional background context for both parties
  * @param {boolean} opts.useKuzeCore   - Whether to call kuze-core API or simulate inline
+ * @param {string} [opts.exchangeId]   - Optional existing entity_exchanges row (API pre-created shell)
  */
 async function orchestrateExchange({
   topic,
@@ -35,35 +37,54 @@ async function orchestrateExchange({
   seed,
   maxTurns = DEFAULT_MAX_TURNS,
   context = '',
-  useKuzeCore = false
+  useKuzeCore = false,
+  exchangeId: existingExchangeId = null
 }) {
   console.log(`[ilita] Orchestrating exchange: "${topic}" (${maxTurns} turns max)`);
 
   // Load Ilita system prompt
   const ilitaPrompt = await getSystemPrompt();
 
-  // Get instances
-  const { data: ilitaInstance } = await supabase
-    .from('instances')
-    .select('id')
-    .eq('instance_key', 'kuze')
-    .single();
+  // Pick the Ilita arm to attribute exchange drift to (least-recently-active by default).
+  // Kuze is a separate entity (the counterparty), not an Ilita instance.
+  const ilitaInstance = await pickInstance({}).catch(err => {
+    console.warn('[orchestrator] could not pick Ilita instance:', err.message);
+    return null;
+  });
 
-  // Open exchange record
-  const { data: exchange, error } = await supabase
-    .from('entity_exchanges')
-    .insert({
-      exchange_type: 'ilita-kuze',
-      initiator,
-      topic,
-      messages: [],
-      visible_to_brandon: true
-    })
-    .select('id')
-    .single();
+  let exchangeId;
 
-  if (error) throw new Error(`[orchestrator] Failed to open exchange: ${error.message}`);
-  const exchangeId = exchange.id;
+  if (existingExchangeId) {
+    exchangeId = existingExchangeId;
+    const { error: updErr } = await supabase
+      .from('entity_exchanges')
+      .update({
+        exchange_type: 'ilita-kuze',
+        initiator,
+        topic,
+        messages: [],
+        visible_to_brandon: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', exchangeId);
+
+    if (updErr) throw new Error(`[orchestrator] Failed to prepare exchange: ${updErr.message}`);
+  } else {
+    const { data: exchange, error } = await supabase
+      .from('entity_exchanges')
+      .insert({
+        exchange_type: 'ilita-kuze',
+        initiator,
+        topic,
+        messages: [],
+        visible_to_brandon: true
+      })
+      .select('id')
+      .single();
+
+    if (error) throw new Error(`[orchestrator] Failed to open exchange: ${error.message}`);
+    exchangeId = exchange.id;
+  }
 
   console.log(`[ilita] Exchange opened: ${exchangeId}`);
 

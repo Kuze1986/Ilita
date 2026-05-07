@@ -1,6 +1,8 @@
 const anthropic = require('../utils/anthropic');
 const { getSystemPrompt } = require('../utils/systemPrompt');
 const supabase = require('../utils/supabase');
+const { pickInstance, INSTANCE_KEYS } = require('../utils/instanceSelector');
+const memoryService = require('./memoryService');
 
 const MODEL = 'claude-sonnet-4-20250514';
 const MAX_TOKENS = 4096;
@@ -105,18 +107,23 @@ async function loadConversationHistory({ instanceId, participant }) {
  * Process a message from Brandon or Kuze and return Ilita's response.
  * Writes conversation to DB and extracts drift.
  */
-async function processMessage({ from, content, context, instance = 'primary', priorMessages = [] }) {
+async function processMessage({ from, content, context, instance, priorMessages = [] }) {
   const systemPrompt = await getSystemPrompt();
 
-  // Load instance record
-  const { data: instanceData, error: instanceError } = await supabase
-    .from('instances')
-    .select('id, instance_key, context, status')
-    .eq('instance_key', instance)
-    .single();
+  // Load instance record — accept Titarian/Titarius/Titania, otherwise pick least-recently-active
+  let instanceData;
+  try {
+    instanceData = await pickInstance({ preferred: instance });
+  } catch (err) {
+    throw new Error(`[ilita] ${err.message}`);
+  }
 
-  if (instanceError || !instanceData) {
-    throw new Error(`[ilita] Instance not found: ${instance}`);
+  if (!instanceData) {
+    throw new Error(`[ilita] Instance not found: ${instance || '(auto)'}`);
+  }
+
+  if (instance && !INSTANCE_KEYS.includes(instance)) {
+    console.warn(`[ilita] Unknown instance "${instance}" requested; using ${instanceData.instance_key}`);
   }
 
   let history = [];
@@ -134,6 +141,33 @@ async function processMessage({ from, content, context, instance = 'primary', pr
     });
   }
 
+  // Retrieve memory context for this instance — local + shared + open loops
+  let memoryBlock = '';
+  let retrievedMemoryIds = [];
+  try {
+    const slices = await memoryService.retrieveForReply({
+      instanceId: instanceData.id,
+      queryText: content,
+      domain: null
+    });
+    memoryBlock = memoryService.composeMemoryBlockForInstance({
+      instanceKey: instanceData.instance_key,
+      slices
+    });
+    retrievedMemoryIds = [
+      ...slices.localRecent.map(m => m.id),
+      ...slices.localSemantic.map(m => m.id),
+      ...slices.sharedConvergent.map(m => m.id),
+      ...slices.sharedDivergent.map(m => m.id)
+    ];
+  } catch (err) {
+    console.warn('[ilita] memory retrieval failed (continuing without):', err.message);
+  }
+
+  const composedSystem = memoryBlock
+    ? `${systemPrompt}\n\n---\n\n${memoryBlock}`
+    : systemPrompt;
+
   // Build message array — include prior messages for continuity
   const messages = [
     ...history,
@@ -144,7 +178,7 @@ async function processMessage({ from, content, context, instance = 'primary', pr
   const response = await anthropic.messages.create({
     model: MODEL,
     max_tokens: MAX_TOKENS,
-    system: systemPrompt,
+    system: composedSystem,
     messages
   });
 
@@ -191,6 +225,20 @@ async function processMessage({ from, content, context, instance = 'primary', pr
       context,
       from
     }).catch(err => console.error('[ilita] Drift extraction failed:', err.message));
+  }
+
+  // Async memory store + access bookkeeping — don't block the response
+  memoryService.storeMemoriesFromTurn({
+    instanceId: instanceData.id,
+    userContent: content,
+    replyText,
+    sourceType: 'message',
+    sourceId: conversation?.id
+  }).catch(err => console.warn('[ilita] memory store failed:', err.message));
+
+  if (retrievedMemoryIds.length > 0) {
+    memoryService.markAccessed(retrievedMemoryIds)
+      .catch(err => console.warn('[ilita] memory mark-accessed failed:', err.message));
   }
 
   return {

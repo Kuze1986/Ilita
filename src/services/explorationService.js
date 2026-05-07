@@ -1,6 +1,7 @@
 const anthropic = require('../utils/anthropic');
 const { getSystemPrompt } = require('../utils/systemPrompt');
 const supabase = require('../utils/supabase');
+const { pickInstance } = require('../utils/instanceSelector');
 
 const MODEL = 'claude-sonnet-4-20250514';
 
@@ -13,14 +14,10 @@ async function runExplorationCycle({ trigger = 'scheduled' } = {}) {
 
   const systemPrompt = await getSystemPrompt();
 
-  // Get research instance
-  const { data: instance } = await supabase
-    .from('instances')
-    .select('id')
-    .eq('instance_key', 'research')
-    .single();
+  // Pick an Ilita arm to drive the exploration cycle (least-recently-active).
+  const instance = await pickInstance({});
 
-  if (!instance) throw new Error('[ilita] Research instance not found');
+  if (!instance) throw new Error('[ilita] No Ilita instance available for exploration');
 
   // Load shared pool context
   const { data: poolSummary } = await supabase

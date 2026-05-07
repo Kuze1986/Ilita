@@ -8,6 +8,17 @@ const { runExplorationCycle } = require('../services/explorationService');
 const { initiateExchange, evaluateTriggers } = require('../services/triggerService');
 const { readPatterns } = require('../services/bioloopService');
 const supabase = require('../utils/supabase');
+const { processNexusObservations } = require('../services/nexusObservationService');
+const {
+  getSignedUploadUrl,
+  reviewDocument: reviewDocumentPhase6,
+  listDocumentsWithReviews,
+  getLatestReviewForDocument
+} = require('../services/documentReviewService');
+const {
+  processCollectiveMessage,
+  getCollectiveState
+} = require('../services/collectiveService');
 
 // ============================================================
 // HEALTH
@@ -54,17 +65,62 @@ router.get('/state', async (req, res) => {
       { data: identity },
       { data: instances },
       { data: poolHighlights },
-      { data: flags }
+      { data: flags },
+      { count: sharedMemoriesCount },
+      { data: latestDivergence }
     ] = await Promise.all([
       supabase.from('identity').select('version, created_at').eq('active', true).single(),
       supabase.from('instances').select('instance_key, context, status, last_active'),
       supabase.from('shared_pool').select('pool_type, domain, content, weight, convergent, divergent').order('weight', { ascending: false }).limit(5),
-      supabase.from('brandon_flags').select('flag_type, content, priority, created_at').eq('seen', false).order('priority', { ascending: false }).limit(5)
+      supabase.from('brandon_flags').select('flag_type, content, priority, created_at').eq('seen', false).order('priority', { ascending: false }).limit(5),
+      supabase.from('memories').select('*', { count: 'exact', head: true }).eq('visibility', 'shared'),
+      supabase.from('memories')
+        .select('id, content, summary, domain, created_at')
+        .eq('visibility', 'shared')
+        .eq('convergence_state', 'divergent')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
     ]);
 
-    res.json({ identity, instances, poolHighlights, unseenFlags: flags });
+    res.json({
+      identity,
+      instances,
+      poolHighlights,
+      unseenFlags: flags,
+      sharedMemoriesCount: sharedMemoriesCount || 0,
+      latestDivergence: latestDivergence || null
+    });
   } catch (err) {
     console.error('[ilita] /state error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// COLLECTIVE — single synthesized voice across all three arms
+// ============================================================
+
+router.post('/collective/message', async (req, res) => {
+  try {
+    const { from, content, context, priorMessages } = req.body;
+    if (!from || !content) {
+      return res.status(400).json({ error: 'from and content are required' });
+    }
+    const result = await processCollectiveMessage({ from, content, context, priorMessages });
+    res.json(result);
+  } catch (err) {
+    console.error('[ilita] /collective/message error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/collective', async (req, res) => {
+  try {
+    const state = await getCollectiveState();
+    res.json(state);
+  } catch (err) {
+    console.error('[ilita] /collective error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -220,6 +276,135 @@ router.post('/exchanges/:id/close', async (req, res) => {
 });
 
 // ============================================================
+// NEXUS OBSERVATIONS — Read + route portfolio signals
+// ============================================================
+
+router.get('/observations', async (req, res) => {
+  try {
+    const { limit = 50, app, significance } = req.query;
+    let query = supabase
+      .from('app_observations')
+      .select('*')
+      .order('observed_at', { ascending: false })
+      .limit(parseInt(limit, 10) || 50);
+
+    if (app) query = query.eq('app', app);
+    if (significance) query = query.eq('significance', significance);
+
+    const { data, error } = await query;
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ observations: data || [] });
+  } catch (err) {
+    console.error('[ilita] GET /observations error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/observations/unprocessed', async (req, res) => {
+  try {
+    const { count, error } = await supabase
+      .from('app_observations')
+      .select('*', { count: 'exact', head: true })
+      .is('processed_at', null);
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ unprocessed: count ?? 0 });
+  } catch (err) {
+    console.error('[ilita] GET /observations/unprocessed error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/observations/process', async (req, res) => {
+  try {
+    const result = await processNexusObservations();
+    res.json({ success: true, processed: result.processed });
+  } catch (err) {
+    console.error('[ilita] POST /observations/process error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// DOCUMENTS — Upload URL + review (images + text, Phase 6)
+// ============================================================
+
+const DOCUMENT_UPLOAD_MIMES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'text/plain',
+  'text/markdown',
+  'application/json',
+  'application/pdf'
+];
+
+router.post('/documents/upload-url', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const fileName = body.fileName || body.filename;
+    const mimeType = body.mimeType || body.mime_type;
+    const fileSize = body.fileSize ?? body.byteSize;
+
+    if (!fileName || !mimeType) {
+      return res.status(400).json({ error: 'fileName and mimeType are required' });
+    }
+
+    const mt = mimeType.split(';')[0].trim().toLowerCase();
+    if (!DOCUMENT_UPLOAD_MIMES.includes(mt)) {
+      return res.status(400).json({
+        error: `Unsupported file type: ${mimeType}`,
+        supported: DOCUMENT_UPLOAD_MIMES
+      });
+    }
+
+    const result = await getSignedUploadUrl(fileName, mimeType, fileSize);
+    res.json(result);
+  } catch (err) {
+    console.error('[ilita] /documents/upload-url error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/documents/review', async (req, res) => {
+  try {
+    const { documentId } = req.body || {};
+    if (!documentId) return res.status(400).json({ error: 'documentId is required' });
+
+    const review = await reviewDocumentPhase6(documentId);
+    res.json({ success: true, review });
+  } catch (err) {
+    console.error('[ilita] /documents/review error:', err.message);
+    const code = /not found|Could not extract/i.test(err.message) ? 404 : 500;
+    res.status(code).json({ error: err.message });
+  }
+});
+
+router.get('/documents', async (req, res) => {
+  try {
+    const { limit = 20 } = req.query;
+    const data = await listDocumentsWithReviews({ limit });
+    res.json({ documents: data });
+  } catch (err) {
+    console.error('[ilita] GET /documents error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/documents/:id/review', async (req, res) => {
+  try {
+    const review = await getLatestReviewForDocument(req.params.id);
+    if (!review) return res.status(404).json({ error: 'No review found' });
+    res.json({ review });
+  } catch (err) {
+    console.error('[ilita] GET /documents/:id/review error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
 // SYNC — Manual trigger
 // ============================================================
 
@@ -258,9 +443,6 @@ router.post('/orchestrate', async (req, res) => {
 
     // Non-blocking — exchange runs async, returns exchange ID immediately
     const { orchestrateExchange } = require('../services/orchestratorService');
-
-    // Create exchange shell first so caller has the ID
-    const { createClient } = require('@supabase/supabase-js');
     const sb = require('../utils/supabase');
 
     const { data: ex } = await sb
@@ -275,8 +457,10 @@ router.post('/orchestrate', async (req, res) => {
       .select('id')
       .single();
 
-    // Run orchestration in background
-    orchestrateExchange({ topic, initiator, seed, context, maxTurns })
+    if (!ex?.id) return res.status(500).json({ error: 'Failed to create exchange' });
+
+    // Run orchestration in background using the same row (orchestrator accepts existing id)
+    orchestrateExchange({ topic, initiator, seed, context, maxTurns, exchangeId: ex.id })
       .catch(err => console.error('[orchestrate] Background error:', err.message));
 
     res.json({ exchangeId: ex.id, status: 'running', message: 'Exchange started — watch the Observatory' });

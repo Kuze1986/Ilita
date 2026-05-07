@@ -1,6 +1,7 @@
 const anthropic = require('../utils/anthropic');
 const { getSystemPrompt } = require('../utils/systemPrompt');
 const supabase = require('../utils/supabase');
+const { pickInstance } = require('../utils/instanceSelector');
 
 const MODEL = 'claude-sonnet-4-20250514';
 
@@ -23,12 +24,11 @@ async function runBioLoopIngest() {
 
   const systemPrompt = await getSystemPrompt();
 
-  // Get research instance
-  const { data: instance } = await supabase
-    .from('instances')
-    .select('id')
-    .eq('instance_key', 'research')
-    .single();
+  // Pick an Ilita arm to attribute pattern-derived state changes to.
+  const instance = await pickInstance({}).catch(err => {
+    console.warn('[bioloop-ingest] could not pick Ilita instance:', err.message);
+    return null;
+  });
 
   let processed = 0;
   let driftWritten = 0;

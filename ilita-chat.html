@@ -40,7 +40,7 @@
   body {
     display: grid;
     grid-template-rows: auto 1fr;
-    grid-template-columns: 240px 1fr 320px;
+    grid-template-columns: 320px 1fr 320px;
     grid-template-areas:
       "header header header"
       "left   main   right";
@@ -146,9 +146,222 @@
   .left-panel {
     grid-area: left;
     border-right: 1px solid var(--border);
-    padding: 24px 20px;
-    overflow-y: auto;
+    padding: 14px 14px;
+    overflow: hidden;
     background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .mini-chat {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-elevated);
+    overflow: hidden;
+    transition: border-color 200ms;
+  }
+
+  .mini-chat.focused {
+    border-color: var(--accent-dim);
+  }
+
+  .mini-chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  .mini-chat-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-secondary);
+  }
+
+  .mini-chat-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+
+  .mini-chat-dot.active {
+    background: var(--accent);
+    box-shadow: 0 0 6px rgba(201, 136, 92, 0.5);
+  }
+
+  .mini-chat-clear {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 2px 4px;
+    border-radius: 3px;
+  }
+
+  .mini-chat-clear:hover {
+    color: var(--accent-bright);
+    background: var(--bg);
+  }
+
+  .mini-chat-feed {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 10px;
+    font-family: var(--serif);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .mini-chat-feed::-webkit-scrollbar { width: 5px; }
+  .mini-chat-feed::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+
+  .mini-chat-empty {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 12px;
+    text-align: center;
+    padding: 14px 4px;
+  }
+
+  .mini-msg {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .mini-msg-from {
+    font-family: var(--mono);
+    font-size: 8.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+  }
+
+  .mini-msg.from-brandon .mini-msg-from { color: var(--text-secondary); }
+  .mini-msg.from-ilita .mini-msg-from { color: var(--accent); }
+
+  .mini-msg-body {
+    font-family: var(--serif);
+    font-size: 13px;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  .mini-msg.from-brandon .mini-msg-body {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    padding-left: 8px;
+    border-left: 1px solid var(--border-strong);
+  }
+
+  .mini-chat-input-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    padding: 6px 8px;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  .mini-chat-input {
+    flex: 1;
+    background: var(--bg-input);
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-family: var(--serif);
+    font-size: 13px;
+    line-height: 1.45;
+    padding: 6px 8px;
+    resize: none;
+    outline: none;
+    max-height: 110px;
+    min-height: 28px;
+  }
+
+  .mini-chat-input::placeholder {
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .mini-chat-input:focus {
+    border-color: var(--accent-dim);
+  }
+
+  .mini-chat-send {
+    background: var(--accent-dim);
+    color: var(--accent-bright);
+    border: 1px solid var(--accent-dim);
+    border-radius: 4px;
+    padding: 5px 9px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: all 200ms;
+  }
+
+  .mini-chat-send:hover:not(:disabled) {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  .mini-chat-send:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* mobile dropdown for left panel — populated only at <900px */
+  .mini-chat-dropdown {
+    display: none;
+  }
+
+  /* ---------- COLLECTIVE FOOTER CHIP ---------- */
+  .collective-chip {
+    margin: 0 80px 14px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-elevated);
+    align-self: flex-start;
+    width: fit-content;
+  }
+
+  .collective-chip span {
+    color: var(--accent-bright);
+  }
+
+  .collective-chip.hidden {
+    display: none;
   }
 
   .panel-title {
@@ -537,6 +750,407 @@
     text-align: center;
   }
 
+  /* ---------- RIGHT PANEL TABS ---------- */
+  .panel-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+  }
+
+  .panel-tab {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    color: var(--text-muted);
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 8px 6px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 200ms;
+  }
+
+  .panel-tab:hover {
+    color: var(--text-secondary);
+    border-color: var(--text-muted);
+  }
+
+  .panel-tab.active {
+    background: var(--bg-elevated);
+    border-color: var(--accent-dim);
+    color: var(--accent-bright);
+  }
+
+  .panel-tab-panel.hidden {
+    display: none;
+  }
+
+  .panel-tab-panel {
+    min-height: 120px;
+  }
+
+  .obs-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .obs-controls textarea,
+  .obs-controls input[type="text"] {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    padding: 8px 10px;
+    color: var(--text-primary);
+    font-family: var(--mono);
+    font-size: 11px;
+    outline: none;
+  }
+
+  .obs-controls textarea {
+    min-height: 56px;
+    resize: vertical;
+  }
+
+  .obs-controls-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .obs-controls-row select {
+    background: var(--bg-input);
+    border: 1px solid var(--border-strong);
+    color: var(--text-secondary);
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+  }
+
+  .obs-feed {
+    max-height: 220px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+  }
+
+  .obs-feed-row {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 10px;
+    transition: border-color 200ms, background 200ms;
+  }
+
+  .obs-feed-row:hover {
+    border-color: var(--border-strong);
+    background: var(--bg-elevated);
+  }
+
+  .obs-feed-row.selected {
+    border-color: var(--accent-dim);
+    background: var(--bg-elevated);
+  }
+
+  .obs-feed-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .obs-feed-topic {
+    color: var(--text-primary);
+    font-family: var(--serif);
+    font-size: 13px;
+    font-style: italic;
+    letter-spacing: 0;
+    text-transform: none;
+    line-height: 1.35;
+  }
+
+  .obs-detail {
+    max-height: 260px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 12px;
+    background: var(--bg-elevated);
+  }
+
+  .obs-msg {
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+
+  .obs-msg:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .obs-msg-from {
+    color: var(--accent);
+    text-transform: uppercase;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    margin-bottom: 4px;
+  }
+
+  .obs-msg-body {
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    line-height: 1.5;
+  }
+
+  .doc-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .doc-actions input[type="file"] {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  .doc-row-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .doc-list {
+    max-height: 340px;
+    overflow-y: auto;
+  }
+
+  .doc-card {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    background: var(--bg-elevated);
+  }
+
+  .doc-card-title {
+    color: var(--text-primary);
+    font-family: var(--serif);
+    font-size: 13px;
+    margin-bottom: 6px;
+    font-style: italic;
+  }
+
+  .doc-status {
+    display: inline-block;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 9px;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .doc-review-summary {
+    color: var(--text-secondary);
+    font-family: var(--serif);
+    font-size: 13px;
+    line-height: 1.45;
+    margin-top: 8px;
+  }
+
+  .doc-review-points {
+    margin-top: 8px;
+    padding-left: 14px;
+    color: var(--text-secondary);
+    font-family: var(--mono);
+    font-size: 10px;
+    line-height: 1.45;
+  }
+
+  .obs-nexus-section {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  .obs-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+
+  .obs-badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--accent-bright);
+    border: 1px solid var(--accent-dim);
+    padding: 4px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .obs-btn-sm {
+    padding: 6px 10px;
+    font-size: 9px;
+  }
+
+  .observation-feed {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px;
+    background: var(--bg-elevated);
+  }
+
+  .obs-row-nx {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    border: 1px solid transparent;
+  }
+
+  .obs-row-nx .nx-event {
+    flex: 1;
+    min-width: 80px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .obs-row-nx.critical { border-color: #8a4a4a; background: rgba(138, 74, 74, 0.12); }
+  .obs-row-nx.high { border-color: #6a5a4a; }
+  .obs-row-nx.muted { opacity: 0.85; }
+
+  .app-badge {
+    text-transform: uppercase;
+    font-size: 8px;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+  }
+
+  .sig-badge {
+    font-size: 8px;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid var(--border-strong);
+  }
+
+  .sig-badge.critical { color: #e8a0a0; border-color: #8a4a4a; }
+  .sig-badge.high { color: var(--accent-bright); }
+
+  .processed-mark {
+    color: #6a9a6a;
+    font-size: 11px;
+  }
+
+  .upload-drop {
+    border: 1px dashed var(--border-strong);
+    border-radius: 6px;
+    padding: 16px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 200ms, background 200ms;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .upload-drop:hover,
+  .upload-drop.drag-over {
+    border-color: var(--accent-dim);
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+  }
+
+  .upload-prompt-sub {
+    display: block;
+    margin-top: 8px;
+    font-size: 9px;
+    color: var(--text-muted);
+    text-transform: none;
+    letter-spacing: 0.05em;
+  }
+
+  .doc-preview-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-top: 12px;
+  }
+
+  .doc-preview-row img {
+    max-width: 200px;
+    max-height: 140px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .review-card {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: var(--bg-elevated);
+    font-family: var(--mono);
+    font-size: 10px;
+  }
+
+  .review-card.new {
+    animation: fadeIn 400ms ease-out;
+  }
+
+  .review-card .review-summary {
+    font-family: var(--serif);
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 8px;
+    line-height: 1.45;
+  }
+
   /* ---------- DIALOGS ---------- */
   dialog {
     border: 1px solid var(--border-strong);
@@ -739,9 +1353,10 @@
   /* Responsive */
   @media (max-width: 1100px) {
     body {
-      grid-template-columns: 200px 1fr 280px;
+      grid-template-columns: 260px 1fr 280px;
     }
     .conversation, .input-area { padding-left: 40px; padding-right: 40px; }
+    .collective-chip { margin-left: 40px; margin-right: 40px; }
   }
 
   @media (max-width: 900px) {
@@ -751,6 +1366,26 @@
     }
     .left-panel, .right-panel { display: none; }
     .conversation, .input-area { padding-left: 24px; padding-right: 24px; }
+    .collective-chip { margin-left: 24px; margin-right: 24px; }
+    .mini-chat-dropdown {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-elevated);
+      font-family: var(--mono);
+      font-size: 10px;
+    }
+    .mini-chat-dropdown select {
+      background: var(--bg-input);
+      border: 1px solid var(--border-strong);
+      color: var(--text-primary);
+      padding: 5px 8px;
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 11px;
+    }
   }
 </style>
 </head>
@@ -766,60 +1401,127 @@
   </div>
   <div class="header-right">
     <div class="header-meta">drift / <span id="driftCount">—</span></div>
+    <div class="header-meta">shared / <span id="sharedMemoryCount">—</span></div>
     <div class="header-meta">v<span id="identityVersion">—</span></div>
+    <button class="icon-btn" id="constitutionBtn">constitution</button>
+    <button class="icon-btn" id="refreshBtn">refresh</button>
     <button class="icon-btn" id="settingsBtn">settings</button>
   </div>
 </header>
 
-<aside class="left-panel">
-  <div class="panel-section">
-    <div class="panel-title">Instances</div>
-    <div class="instance-list" id="instanceList">
-      <div class="instance-item active" data-instance="primary">
-        <span class="label">primary</span>
-        <span class="badge">active</span>
-      </div>
-      <div class="instance-item" data-instance="research">
-        <span class="label">research</span>
-        <span class="badge">—</span>
-      </div>
-      <div class="instance-item" data-instance="kuze">
-        <span class="label">kuze</span>
-        <span class="badge">—</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="panel-section">
-    <div class="panel-title">Reference</div>
-    <a class="text-link" id="constitutionBtn">Constitution</a>
-    <a class="text-link" id="refreshBtn">Refresh state</a>
-    <a class="text-link" id="clearBtn">Clear chat</a>
-  </div>
+<aside class="left-panel" id="leftPanel">
+  <!-- Mini-chat cards are rendered by JS into this container -->
 </aside>
 
 <main>
+  <div class="mini-chat-dropdown" id="miniChatDropdown">
+    <span>Instance:</span>
+    <select id="miniChatSelect"></select>
+  </div>
   <div class="conversation" id="conversation">
     <div class="empty-state" id="emptyState">
-      She is here.<br>Begin where you are.
+      She is here, as one.<br>The Collective answers.
     </div>
+  </div>
+
+  <div class="collective-chip hidden" id="collectiveChip">
+    via <span id="collectiveChipNames">—</span>
   </div>
 
   <div class="input-area">
     <div class="input-wrapper">
-      <textarea id="messageInput" rows="1" placeholder="Continue the thought…"></textarea>
+      <textarea id="messageInput" rows="1" placeholder="Speak with the Collective…"></textarea>
       <button class="send-btn" id="sendBtn">Send</button>
     </div>
     <div class="input-hint">
-      <kbd>⌘</kbd> + <kbd>↵</kbd> to send · <kbd>↵</kbd> for newline
+      <kbd>⌘</kbd> + <kbd>↵</kbd> to send · <kbd>↵</kbd> for newline · main window = collective
     </div>
   </div>
 </main>
 
 <aside class="right-panel">
-  <div class="panel-title">Drift — recent</div>
-  <div id="driftFeed">
-    <div class="drift-empty">No drift yet.<br>It will appear after each exchange.</div>
+  <div class="panel-tabs">
+    <button type="button" class="panel-tab active" data-tab="drift">Drift</button>
+    <button type="button" class="panel-tab" data-tab="observatory">Observatory</button>
+    <button type="button" class="panel-tab" data-tab="documents">Documents</button>
+  </div>
+
+  <div class="panel-tab-panel" id="tabPanelDrift">
+    <div class="panel-title">Drift — recent</div>
+    <div id="driftFeed">
+      <div class="drift-empty">No drift yet.<br>It will appear after each exchange.</div>
+    </div>
+  </div>
+
+  <div class="panel-tab-panel hidden" id="tabPanelObservatory">
+    <div class="panel-title">Kuze observatory</div>
+    <div class="obs-controls">
+      <div class="obs-controls-row">
+        <label><input type="checkbox" id="obsFilterOpen" /> Open only</label>
+        <label>Type
+          <select id="obsFilterType">
+            <option value="">All types</option>
+            <option value="ilita-kuze" selected>ilita-kuze</option>
+          </select>
+        </label>
+      </div>
+      <input type="text" id="obsTopic" placeholder="Topic — e.g. positioning note for launch" />
+      <textarea id="obsSeed" placeholder="Opening seed — first thought or question for the exchange"></textarea>
+      <button type="button" class="btn" id="obsStartBtn">Start orchestrated exchange</button>
+    </div>
+    <div class="panel-title" style="margin-top:4px;">Feed</div>
+    <div class="obs-feed" id="obsFeed"></div>
+    <div class="panel-title">Timeline</div>
+    <div class="obs-detail" id="obsDetail">
+      <div class="drift-empty" style="padding:12px 0;">Select an exchange to inspect messages.</div>
+    </div>
+    <textarea id="obsInjectBody" placeholder="Inject message as Brandon (logged on exchange)"></textarea>
+    <div class="doc-row-actions" style="margin-top:10px;">
+      <button type="button" class="btn" id="obsInjectBtn">Inject</button>
+      <button type="button" class="btn btn-ghost" id="obsCloseBtn">Close exchange</button>
+      <button type="button" class="btn btn-ghost" id="obsRefreshBtn">Refresh now</button>
+    </div>
+
+    <div class="obs-nexus-section">
+      <div class="obs-section-header">
+        <span class="panel-title" style="margin:0;">NEXUS Signals</span>
+        <span id="obsUnprocessedCount" class="obs-badge">—</span>
+        <button type="button" class="btn btn-ghost obs-btn-sm" id="obsNexusProcessBtn">Process now</button>
+      </div>
+      <div id="nexusObservationFeed" class="observation-feed">
+        <div class="drift-empty" style="padding:8px 0;">Loading observations…</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-tab-panel hidden" id="tabPanelDocuments">
+    <div class="panel-title">Documents &amp; images</div>
+    <p class="form-field-help" style="margin-bottom:12px;">Share files with Ilita for review (upload + read in one step).</p>
+    <input type="file" id="docFileInput" accept=".txt,.md,.json,.pdf,image/jpeg,image/png,image/gif,image/webp,text/plain,text/markdown,application/json,application/pdf" style="display:none" />
+    <div class="upload-drop" id="docUploadDrop" tabindex="0" role="button" aria-label="Choose file to upload">
+      <div>Drop a file or click to browse</div>
+      <span class="upload-prompt-sub">txt · md · json · pdf · jpg · png · gif · webp</span>
+    </div>
+    <div id="docUploadPreview" class="doc-preview-row" style="display:none;">
+      <div id="docImagePreviewWrap" style="display:none;">
+        <img id="docImagePreview" alt="Selected image preview" />
+      </div>
+      <div>
+        <div id="docFileNameDisplay" style="font-family:var(--mono);font-size:11px;color:var(--text-primary);"></div>
+        <div id="docFileSizeDisplay" style="font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:4px;"></div>
+        <div class="doc-row-actions" style="margin-top:10px;">
+          <button type="button" class="btn" id="docShareBtn">Share with Ilita</button>
+          <button type="button" class="btn btn-ghost" id="docReviewSelectedBtn">Review selected</button>
+          <button type="button" class="btn btn-ghost" id="docListBtn">Refresh list</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-field-help" id="docStatusLine" style="margin-top:10px;"></div>
+    <div class="panel-title" style="margin-top:16px;">Recent</div>
+    <div class="doc-list" id="docList">
+      <div class="drift-empty" style="padding:12px 0;">Nothing shared yet.</div>
+    </div>
+    <div id="docReviewFeed"></div>
   </div>
 </aside>
 
@@ -865,16 +1567,35 @@
   // STATE
   // ============================================================
 
+  const INSTANCE_KEYS = ['Titarian', 'Titarius', 'Titania'];
+
   const state = {
     apiUrl: 'http://localhost:3737',
     apiKey: '',
-    currentInstance: 'primary',
-    histories: { primary: [], research: [], kuze: [] },
+    histories: { Titarian: [], Titarius: [], Titania: [] },
+    miniSending: { Titarian: false, Titarius: false, Titania: false },
+    collectiveHistory: [],
+    collectiveSending: false,
     instances: [],
     driftCount: 0,
+    sharedMemoryCount: 0,
     identityVersion: '—',
-    sending: false
+    observatory: {
+      exchanges: [],
+      selectedId: null,
+      polling: false
+    },
+    documents: {
+      lastUploadedId: null,
+      selectedId: null,
+      uploading: false,
+      reviewing: false
+    }
   };
+
+  let observatoryPollTimer = null;
+  let nexusObsPollTimer = null;
+  let selectedShareFile = null;
 
   const CONSTITUTION_TEXT = `<h1>The Ilita Constitution</h1>
 <h3>A Founding Document</h3>
@@ -945,6 +1666,447 @@
     return res.json();
   }
 
+  async function rawPut(url, body, headers = {}) {
+    const res = await fetch(url, { method: 'PUT', body, headers });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`${res.status}: ${text || res.statusText}`);
+    }
+    return res;
+  }
+
+  // ---------- Observatory ----------
+  function stopNexusObsPoll() {
+    if (nexusObsPollTimer) {
+      clearInterval(nexusObsPollTimer);
+      nexusObsPollTimer = null;
+    }
+  }
+
+  function startNexusObsPoll() {
+    stopNexusObsPoll();
+    loadNexusObservations();
+    nexusObsPollTimer = setInterval(loadNexusObservations, 60000);
+  }
+
+  function stopObservatoryPoll() {
+    if (observatoryPollTimer) {
+      clearInterval(observatoryPollTimer);
+      observatoryPollTimer = null;
+    }
+    stopNexusObsPoll();
+    state.observatory.polling = false;
+  }
+
+  function startObservatoryPoll() {
+    stopObservatoryPoll();
+    state.observatory.polling = true;
+    loadObservatoryFeed();
+    observatoryPollTimer = setInterval(loadObservatoryFeed, 30000);
+    startNexusObsPoll();
+  }
+
+  function formatRelativeTime(iso) {
+    if (!iso) return '';
+    const t = new Date(iso).getTime();
+    if (Number.isNaN(t)) return '';
+    const s = Math.floor((Date.now() - t) / 1000);
+    if (s < 60) return `${s}s ago`;
+    if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+    if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+    return `${Math.floor(s / 86400)}d ago`;
+  }
+
+  async function loadNexusObservations() {
+    try {
+      const res = await apiCall('/ilita/observations?limit=15');
+      const list = res.observations || [];
+      const feed = document.getElementById('nexusObservationFeed');
+      if (!list.length) {
+        feed.innerHTML = '<div class="drift-empty" style="padding:8px 0;">No observations yet.</div>';
+      } else {
+        feed.innerHTML = list.map(obs => {
+          const sig = (obs.significance || 'normal').toLowerCase();
+          const rowClass = ['critical', 'high'].includes(sig) ? sig : 'muted';
+          return `
+            <div class="obs-row-nx ${rowClass}">
+              <span class="app-badge">${escapeHtml(obs.app || '—')}</span>
+              <span class="nx-event">${escapeHtml(obs.event_type || '')}</span>
+              <span class="sig-badge ${sig === 'critical' || sig === 'high' ? sig : ''}">${escapeHtml(obs.significance || '')}</span>
+              <span style="color:var(--text-muted);font-size:9px;">${escapeHtml(formatRelativeTime(obs.observed_at))}</span>
+              ${obs.processed_at ? '<span class="processed-mark" title="Processed">✓</span>' : ''}
+            </div>`;
+        }).join('');
+      }
+      const countRes = await apiCall('/ilita/observations/unprocessed').catch(() => ({ unprocessed: '?' }));
+      const el = document.getElementById('obsUnprocessedCount');
+      if (el) el.textContent = `${countRes.unprocessed ?? 0} unprocessed`;
+    } catch (e) {
+      console.warn('NEXUS observations load failed:', e.message);
+    }
+  }
+
+  async function triggerObservationProcess() {
+    try {
+      const res = await apiCall('/ilita/observations/process', { method: 'POST', body: '{}' });
+      showToast(`Processed ${res.processed ?? 0} observation(s).`);
+      await loadNexusObservations();
+    } catch (e) {
+      showToast('Observation process failed: ' + e.message);
+    }
+  }
+
+  function exchangeIsOpen(ex) {
+    const o = ex.outcome;
+    return o == null || String(o).trim() === '';
+  }
+
+  async function loadObservatoryFeed() {
+    try {
+      const raw = await apiCall('/ilita/exchanges?limit=40');
+      const openOnly = document.getElementById('obsFilterOpen').checked;
+      const typeFilter = document.getElementById('obsFilterType').value;
+      let rows = Array.isArray(raw) ? raw : [];
+      if (typeFilter) rows = rows.filter(e => e.exchange_type === typeFilter);
+      if (openOnly) rows = rows.filter(exchangeIsOpen);
+      state.observatory.exchanges = rows;
+      renderObsFeed();
+      if (state.observatory.selectedId) {
+        const still = rows.some(r => r.id === state.observatory.selectedId);
+        if (still) renderObsDetail(state.observatory.selectedId);
+        else {
+          const full = await apiCall('/ilita/exchanges/' + state.observatory.selectedId).catch(() => null);
+          if (full) renderObsDetailFromExchange(full);
+        }
+      }
+    } catch (e) {
+      console.warn('Observatory poll failed:', e.message);
+    }
+  }
+
+  function renderObsFeed() {
+    const el = document.getElementById('obsFeed');
+    const rows = state.observatory.exchanges;
+    if (!rows.length) {
+      el.innerHTML = `<div class="drift-empty" style="padding:12px 0;">No exchanges match filters.</div>`;
+      return;
+    }
+    el.innerHTML = '';
+    for (const ex of rows) {
+      const row = document.createElement('div');
+      row.className = 'obs-feed-row' + (ex.id === state.observatory.selectedId ? ' selected' : '');
+      const open = exchangeIsOpen(ex);
+      const t = ex.created_at ? new Date(ex.created_at).toLocaleString() : '';
+      row.innerHTML = `
+        <div class="obs-feed-meta">
+          <span>${escapeHtml(ex.exchange_type || '—')} · ${escapeHtml(ex.initiator || '—')}</span>
+          <span>${open ? 'open' : 'closed'} · ${escapeHtml(t)}</span>
+        </div>
+        <div class="obs-feed-topic">${escapeHtml(ex.topic || '(no topic)')}</div>
+      `;
+      row.onclick = () => selectObsExchange(ex.id);
+      el.appendChild(row);
+    }
+  }
+
+  function renderObsDetailFromExchange(ex) {
+    const detail = document.getElementById('obsDetail');
+    const msgs = ex.messages || [];
+    if (!msgs.length) {
+      detail.innerHTML = `<div class="drift-empty" style="padding:12px 0;">No messages yet — orchestration may still be running.</div>`;
+      return;
+    }
+    detail.innerHTML = '';
+    for (const m of msgs) {
+      const div = document.createElement('div');
+      div.className = 'obs-msg';
+      const ts = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+      div.innerHTML = `
+        <div class="obs-msg-from">${escapeHtml(m.from || '?')} ${ts ? ' · ' + escapeHtml(ts) : ''}</div>
+        <div class="obs-msg-body">${escapeHtml(m.content || '')}</div>
+      `;
+      detail.appendChild(div);
+    }
+  }
+
+  async function renderObsDetail(id) {
+    const local = state.observatory.exchanges.find(e => e.id === id);
+    if (local && Array.isArray(local.messages)) {
+      renderObsDetailFromExchange(local);
+      return;
+    }
+    try {
+      const ex = await apiCall('/ilita/exchanges/' + id);
+      renderObsDetailFromExchange(ex);
+    } catch (e) {
+      document.getElementById('obsDetail').innerHTML = `<div class="drift-empty">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  function selectObsExchange(id) {
+    state.observatory.selectedId = id;
+    renderObsFeed();
+    renderObsDetail(id);
+  }
+
+  async function obsStartOrchestrated() {
+    const topic = document.getElementById('obsTopic').value.trim();
+    const seed = document.getElementById('obsSeed').value.trim();
+    if (!topic || !seed) {
+      showToast('Topic and seed are required.');
+      return;
+    }
+    try {
+      const data = await apiCall('/ilita/orchestrate', {
+        method: 'POST',
+        body: JSON.stringify({ topic, seed, initiator: 'ilita' })
+      });
+      showToast('Exchange started: ' + (data.exchangeId || '').slice(0, 8) + '…');
+      if (data.exchangeId) selectObsExchange(data.exchangeId);
+      await loadObservatoryFeed();
+    } catch (e) {
+      showToast('Orchestrate failed: ' + e.message);
+    }
+  }
+
+  async function obsInject() {
+    const id = state.observatory.selectedId;
+    const content = document.getElementById('obsInjectBody').value.trim();
+    if (!id) {
+      showToast('Select an exchange first.');
+      return;
+    }
+    if (!content) {
+      showToast('Inject content is empty.');
+      return;
+    }
+    try {
+      await apiCall('/ilita/exchanges/' + id + '/inject', {
+        method: 'POST',
+        body: JSON.stringify({ content })
+      });
+      document.getElementById('obsInjectBody').value = '';
+      await loadObservatoryFeed();
+      await renderObsDetail(id);
+      showToast('Injected.');
+    } catch (e) {
+      showToast('Inject failed: ' + e.message);
+    }
+  }
+
+  async function obsClose() {
+    const id = state.observatory.selectedId;
+    if (!id) {
+      showToast('Select an exchange first.');
+      return;
+    }
+    const outcome = window.prompt('Outcome summary (optional)', '') || '';
+    try {
+      await apiCall('/ilita/exchanges/' + id + '/close', {
+        method: 'POST',
+        body: JSON.stringify({ outcome })
+      });
+      await loadObservatoryFeed();
+      await renderObsDetail(id);
+      showToast('Exchange closed.');
+    } catch (e) {
+      showToast('Close failed: ' + e.message);
+    }
+  }
+
+  // ---------- Documents ----------
+  function latestDocReview(d) {
+    const revs = d.document_reviews;
+    if (!Array.isArray(revs) || !revs.length) return null;
+    return [...revs].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+  }
+
+  async function loadDocumentsList() {
+    try {
+      const res = await apiCall('/ilita/documents?limit=40');
+      const rows = res.documents || [];
+      renderDocList(rows);
+    } catch (e) {
+      console.warn('Documents list failed:', e.message);
+      showToast('Documents list failed: ' + e.message);
+    }
+  }
+
+  function renderDocList(rows) {
+    const el = document.getElementById('docList');
+    if (!rows.length) {
+      el.innerHTML = `<div class="drift-empty" style="padding:12px 0;">Nothing shared yet.</div>`;
+      return;
+    }
+    el.innerHTML = '';
+    for (const d of rows) {
+      const card = document.createElement('div');
+      card.className = 'doc-card';
+      if (d.id === state.documents.selectedId) card.style.borderColor = 'var(--accent)';
+      const lr = latestDocReview(d);
+      const points = lr && Array.isArray(lr.key_points) ? lr.key_points : [];
+      const flags = lr && Array.isArray(lr.drift_flags) ? lr.drift_flags : [];
+      const icon = d.is_image ? 'Image' : 'Doc';
+      card.innerHTML = `
+        <div class="doc-card-title">[${icon}] ${escapeHtml(d.file_name || d.storage_path || d.id)}</div>
+        <div class="doc-status">${escapeHtml(d.status || '')} · ${escapeHtml(d.mime_type || '')}</div>
+        ${lr ? `
+          <div class="doc-review-summary">${escapeHtml(lr.summary || '')}</div>
+          ${lr.image_description && d.is_image ? `<div class="doc-review-summary" style="font-style:italic;">${escapeHtml(lr.image_description.slice(0, 400))}${lr.image_description.length > 400 ? '…' : ''}</div>` : ''}
+          ${points.length ? `<ul class="doc-review-points">${points.map(p => `<li>${escapeHtml(String(p))}</li>`).join('')}</ul>` : ''}
+          ${flags.length ? `<div class="doc-review-points" style="margin-top:8px;color:var(--accent-bright);">Drift / flags:<ul style="margin-top:4px;">${flags.map(f => `<li>${escapeHtml(typeof f === 'object' ? (f.label || '') + ': ' + (f.detail || '') : String(f))}</li>`).join('')}</ul></div>` : ''}
+        ` : ''}
+      `;
+      card.onclick = () => {
+        state.documents.selectedId = d.id;
+        renderDocList(rows);
+      };
+      el.appendChild(card);
+    }
+  }
+
+  function setDocStatusLine(msg) {
+    const el = document.getElementById('docStatusLine');
+    if (el) el.textContent = msg;
+  }
+
+  function displayReviewResultCard(review, isImage) {
+    const feed = document.getElementById('docReviewFeed');
+    if (!feed || !review) return;
+    const card = document.createElement('div');
+    card.className = 'review-card new';
+    const kp = Array.isArray(review.key_points) ? review.key_points : [];
+    const df = Array.isArray(review.drift_flags) ? review.drift_flags : [];
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;color:var(--text-muted);font-size:9px;text-transform:uppercase;letter-spacing:0.1em;">
+        <span>${isImage ? 'Image' : 'Document'} review</span>
+        <span>just now</span>
+      </div>
+      ${isImage && review.image_description ? `<div class="review-summary">${escapeHtml(review.image_description.slice(0, 800))}${review.image_description.length > 800 ? '…' : ''}</div>` : ''}
+      <div class="review-summary">${escapeHtml(review.summary || '')}</div>
+      ${kp.length ? `<ul class="doc-review-points">${kp.map(p => `<li>${escapeHtml(String(p))}</li>`).join('')}</ul>` : ''}
+      ${df.length ? `<div style="margin-top:8px;color:var(--accent-bright);font-size:9px;text-transform:uppercase;">Drift flags</div>${df.map(f => `<p class="review-summary" style="margin-top:4px;">${escapeHtml(String(f))}</p>`).join('')}` : ''}
+    `;
+    feed.prepend(card);
+    setTimeout(() => card.classList.remove('new'), 200);
+  }
+
+  function applySelectedFile(file) {
+    selectedShareFile = file;
+    const prev = document.getElementById('docUploadPreview');
+    const nameEl = document.getElementById('docFileNameDisplay');
+    const sizeEl = document.getElementById('docFileSizeDisplay');
+    const imgWrap = document.getElementById('docImagePreviewWrap');
+    const img = document.getElementById('docImagePreview');
+    if (!file) {
+      prev.style.display = 'none';
+      return;
+    }
+    prev.style.display = 'flex';
+    nameEl.textContent = file.name;
+    sizeEl.textContent = `${(file.size / 1024).toFixed(1)} KB`;
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        img.src = e.target.result;
+        imgWrap.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    } else {
+      imgWrap.style.display = 'none';
+      img.removeAttribute('src');
+    }
+    setDocStatusLine('Ready — use Share with Ilita when you want her to read it.');
+  }
+
+  async function shareFileWithIlita() {
+    const file = selectedShareFile;
+    if (!file) {
+      showToast('Choose a file first.');
+      return;
+    }
+    if (state.documents.uploading || state.documents.reviewing) return;
+    state.documents.uploading = true;
+    state.documents.reviewing = true;
+    setDocStatusLine('Getting upload URL…');
+    const btn = document.getElementById('docShareBtn');
+    if (btn) btn.disabled = true;
+    try {
+      const mime = file.type || 'application/octet-stream';
+      const urlRes = await apiCall('/ilita/documents/upload-url', {
+        method: 'POST',
+        body: JSON.stringify({
+          fileName: file.name,
+          mimeType: mime,
+          fileSize: file.size
+        })
+      });
+      setDocStatusLine('Uploading to storage…');
+      const putUrl = urlRes.uploadUrl || urlRes.signedUrl;
+      await rawPut(putUrl, file, { 'Content-Type': mime });
+      setDocStatusLine('Ilita is reading…');
+      const reviewRes = await apiCall('/ilita/documents/review', {
+        method: 'POST',
+        body: JSON.stringify({ documentId: urlRes.documentId })
+      });
+      state.documents.lastUploadedId = urlRes.documentId;
+      state.documents.selectedId = urlRes.documentId;
+      displayReviewResultCard(reviewRes.review, mime.startsWith('image/'));
+      setDocStatusLine('Done.');
+      showToast('Review complete.');
+      selectedShareFile = null;
+      document.getElementById('docUploadPreview').style.display = 'none';
+      document.getElementById('docFileInput').value = '';
+      await loadDocumentsList();
+    } catch (e) {
+      setDocStatusLine('Error: ' + e.message);
+      showToast(e.message);
+    } finally {
+      state.documents.uploading = false;
+      state.documents.reviewing = false;
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function reviewSelectedDocument() {
+    const id = state.documents.selectedId || state.documents.lastUploadedId;
+    if (!id) {
+      showToast('Select a row in Recent first.');
+      return;
+    }
+    if (state.documents.reviewing) return;
+    state.documents.reviewing = true;
+    setDocStatusLine('Re-running review…');
+    try {
+      const reviewRes = await apiCall('/ilita/documents/review', {
+        method: 'POST',
+        body: JSON.stringify({ documentId: id })
+      });
+      displayReviewResultCard(reviewRes.review, false);
+      showToast('Review updated.');
+      await loadDocumentsList();
+    } catch (e) {
+      showToast('Review failed: ' + e.message);
+    } finally {
+      state.documents.reviewing = false;
+      setDocStatusLine('');
+    }
+  }
+
+  function switchRightTab(which) {
+    document.querySelectorAll('.panel-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === which);
+    });
+    document.getElementById('tabPanelDrift').classList.toggle('hidden', which !== 'drift');
+    document.getElementById('tabPanelObservatory').classList.toggle('hidden', which !== 'observatory');
+    document.getElementById('tabPanelDocuments').classList.toggle('hidden', which !== 'documents');
+
+    if (which === 'observatory') startObservatoryPoll();
+    else stopObservatoryPoll();
+
+    if (which === 'documents') loadDocumentsList();
+  }
+
   async function checkHealth() {
     try {
       await apiCall('/ilita/health');
@@ -963,9 +2125,14 @@
         state.identityVersion = data.identity.version || '—';
         document.getElementById('identityVersion').textContent = state.identityVersion;
       }
+      if (typeof data.sharedMemoriesCount === 'number') {
+        state.sharedMemoryCount = data.sharedMemoriesCount;
+        const el = document.getElementById('sharedMemoryCount');
+        if (el) el.textContent = state.sharedMemoryCount;
+      }
       if (data.instances && Array.isArray(data.instances)) {
         state.instances = data.instances;
-        renderInstances();
+        renderMiniChats();
       }
     } catch (e) {
       console.warn('loadState failed:', e.message);
@@ -989,22 +2156,70 @@
     }
   }
 
-  async function sendMessage(content) {
-    if (state.sending) return;
-    state.sending = true;
+  // Main window — message to the Collective Ilita.
+  async function sendCollectiveMessage(content) {
+    if (state.collectiveSending) return;
+    state.collectiveSending = true;
     document.getElementById('sendBtn').disabled = true;
 
     appendMessage('brandon', content);
 
-    // Build priorMessages from in-session history (Option B fallback)
-    // Server-side Option A will also load from DB if this is empty
-    const history = state.histories[state.currentInstance];
-    const priorMessages = history.flatMap(msg => [
+    const priorMessages = state.collectiveHistory.flatMap(msg => [
       { role: msg.brandon ? 'user' : 'assistant', content: msg.content }
     ]).filter(m => m.role && m.content);
 
-    // Show typing indicator
     const typingEl = appendTypingIndicator();
+
+    try {
+      const data = await apiCall('/ilita/collective/message', {
+        method: 'POST',
+        body: JSON.stringify({ from: 'brandon', content, priorMessages })
+      });
+
+      typingEl.remove();
+      appendMessage('ilita', data.reply);
+
+      state.collectiveHistory.push({ brandon: true, content, ts: Date.now() });
+      state.collectiveHistory.push({ brandon: false, content: data.reply, ts: Date.now() });
+
+      const names = Array.isArray(data.contributingInstances) ? data.contributingInstances : [];
+      const chip = document.getElementById('collectiveChip');
+      const chipNames = document.getElementById('collectiveChipNames');
+      if (chip && chipNames) {
+        if (names.length > 0) {
+          chipNames.textContent = names.join(', ');
+          chip.classList.remove('hidden');
+        } else {
+          chip.classList.add('hidden');
+        }
+      }
+
+      setTimeout(() => loadDrift(), 1500);
+      setTimeout(() => loadState(), 1500);
+
+    } catch (e) {
+      typingEl.remove();
+      showToast('Collective send failed: ' + e.message);
+    } finally {
+      state.collectiveSending = false;
+      document.getElementById('sendBtn').disabled = false;
+    }
+  }
+
+  // Left panel — message to a specific instance.
+  async function sendInstanceMessage(instanceKey, content) {
+    if (!INSTANCE_KEYS.includes(instanceKey)) return;
+    if (state.miniSending[instanceKey]) return;
+    state.miniSending[instanceKey] = true;
+    setMiniChatSending(instanceKey, true);
+
+    state.histories[instanceKey].push({ brandon: true, content, ts: Date.now() });
+    renderMiniChatFeed(instanceKey, { typing: true });
+
+    const priorMessages = state.histories[instanceKey]
+      .filter(msg => typeof msg.content === 'string')
+      .slice(-12)
+      .flatMap(msg => [{ role: msg.brandon ? 'user' : 'assistant', content: msg.content }]);
 
     try {
       const data = await apiCall('/ilita/message', {
@@ -1012,27 +2227,20 @@
         body: JSON.stringify({
           from: 'brandon',
           content,
-          instance: state.currentInstance,
+          instance: instanceKey,
           priorMessages
         })
       });
 
-      typingEl.remove();
-      appendMessage('ilita', data.reply);
-
-      // Track in local history
-      history.push({ brandon: true, content, ts: Date.now() });
-      history.push({ brandon: false, content: data.reply, ts: Date.now() });
-
-      // Drift extraction is async — refresh after a beat
+      state.histories[instanceKey].push({ brandon: false, content: data.reply, ts: Date.now() });
+      renderMiniChatFeed(instanceKey);
       setTimeout(() => loadDrift(), 1500);
-
     } catch (e) {
-      typingEl.remove();
-      showToast('Failed: ' + e.message);
+      showToast(`${instanceKey} reply failed: ` + e.message);
+      renderMiniChatFeed(instanceKey);
     } finally {
-      state.sending = false;
-      document.getElementById('sendBtn').disabled = false;
+      state.miniSending[instanceKey] = false;
+      setMiniChatSending(instanceKey, false);
     }
   }
 
@@ -1050,35 +2258,144 @@
     if (detail) console.warn('Status:', status, detail);
   }
 
-  function renderInstances() {
-    const list = document.getElementById('instanceList');
-    list.innerHTML = '';
-    const instanceKeys = ['primary', 'research', 'kuze'];
-    for (const key of instanceKeys) {
+  function renderMiniChats() {
+    const panel = document.getElementById('leftPanel');
+    if (!panel) return;
+    panel.innerHTML = '';
+
+    for (const key of INSTANCE_KEYS) {
       const inst = state.instances.find(i => i.instance_key === key);
-      const item = document.createElement('div');
-      item.className = 'instance-item' + (key === state.currentInstance ? ' active' : '');
-      item.dataset.instance = key;
-      item.innerHTML = `
-        <span class="label">${key}</span>
-        <span class="badge">${inst?.status || '—'}</span>
+      const card = document.createElement('div');
+      card.className = 'mini-chat';
+      card.dataset.instance = key;
+      const dotClass = inst && inst.status === 'active' ? 'active' : '';
+      card.innerHTML = `
+        <div class="mini-chat-header">
+          <div class="mini-chat-title">
+            <span class="mini-chat-dot ${dotClass}"></span>
+            <span>${escapeHtml(key)}</span>
+          </div>
+          <button type="button" class="mini-chat-clear" data-clear="${key}">clear</button>
+        </div>
+        <div class="mini-chat-feed" data-feed="${key}"></div>
+        <div class="mini-chat-input-row">
+          <textarea class="mini-chat-input" data-input="${key}" rows="1" placeholder="Speak with ${escapeHtml(key)}…"></textarea>
+          <button type="button" class="mini-chat-send" data-send="${key}">send</button>
+        </div>
       `;
-      item.onclick = () => switchInstance(key);
-      list.appendChild(item);
+      panel.appendChild(card);
     }
+
+    for (const key of INSTANCE_KEYS) {
+      renderMiniChatFeed(key);
+      const ta = panel.querySelector(`[data-input="${key}"]`);
+      const sendBtn = panel.querySelector(`[data-send="${key}"]`);
+      const clearBtn = panel.querySelector(`[data-clear="${key}"]`);
+      if (ta) {
+        ta.addEventListener('input', () => {
+          ta.style.height = 'auto';
+          ta.style.height = Math.min(ta.scrollHeight, 110) + 'px';
+        });
+        ta.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+            e.preventDefault();
+            handleMiniSend(key);
+          }
+        });
+        ta.addEventListener('focus', () => {
+          panel.querySelectorAll('.mini-chat').forEach(c => c.classList.toggle('focused', c.dataset.instance === key));
+        });
+        ta.addEventListener('blur', () => {
+          const card = panel.querySelector(`.mini-chat[data-instance="${key}"]`);
+          if (card) card.classList.remove('focused');
+        });
+      }
+      if (sendBtn) sendBtn.onclick = () => handleMiniSend(key);
+      if (clearBtn) clearBtn.onclick = () => {
+        if (!confirm(`Clear ${key}'s view? Server history is unaffected.`)) return;
+        state.histories[key] = [];
+        renderMiniChatFeed(key);
+      };
+    }
+
+    renderMiniChatDropdown();
   }
 
-  function switchInstance(key) {
-    state.currentInstance = key;
-    renderInstances();
-    renderConversation();
+  function renderMiniChatDropdown() {
+    const sel = document.getElementById('miniChatSelect');
+    if (!sel) return;
+    sel.innerHTML = '';
+    for (const key of INSTANCE_KEYS) {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = key;
+      sel.appendChild(opt);
+    }
+    sel.onchange = () => {
+      const k = sel.value;
+      const card = document.querySelector(`.mini-chat[data-instance="${k}"]`);
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+  }
+
+  function renderMiniChatFeed(instanceKey, opts = {}) {
+    const feed = document.querySelector(`[data-feed="${instanceKey}"]`);
+    if (!feed) return;
+    const history = state.histories[instanceKey] || [];
+    feed.innerHTML = '';
+    if (!history.length && !opts.typing) {
+      const empty = document.createElement('div');
+      empty.className = 'mini-chat-empty';
+      empty.textContent = `Direct line to ${instanceKey}. Begin.`;
+      feed.appendChild(empty);
+      return;
+    }
+    for (const msg of history) {
+      const row = document.createElement('div');
+      row.className = 'mini-msg ' + (msg.brandon ? 'from-brandon' : 'from-ilita');
+      row.innerHTML = `
+        <span class="mini-msg-from">${msg.brandon ? 'Brandon' : instanceKey}</span>
+        <div class="mini-msg-body">${escapeHtml(msg.content || '')}</div>
+      `;
+      feed.appendChild(row);
+    }
+    if (opts.typing) {
+      const row = document.createElement('div');
+      row.className = 'mini-msg from-ilita';
+      row.innerHTML = `
+        <span class="mini-msg-from">${instanceKey}</span>
+        <div class="mini-msg-body"><span class="typing-indicator"><span></span><span></span><span></span></span></div>
+      `;
+      feed.appendChild(row);
+    }
+    setTimeout(() => { feed.scrollTop = feed.scrollHeight; }, 30);
+  }
+
+  function setMiniChatSending(instanceKey, isSending) {
+    const sendBtn = document.querySelector(`[data-send="${instanceKey}"]`);
+    if (sendBtn) sendBtn.disabled = isSending;
+  }
+
+  function handleMiniSend(instanceKey) {
+    const ta = document.querySelector(`[data-input="${instanceKey}"]`);
+    if (!ta) return;
+    const content = ta.value.trim();
+    if (!content) return;
+    if (!state.apiKey) {
+      showToast('Set the API key in settings first.');
+      openSettings();
+      return;
+    }
+    ta.value = '';
+    ta.style.height = 'auto';
+    sendInstanceMessage(instanceKey, content);
   }
 
   function renderConversation() {
     const conv = document.getElementById('conversation');
-    const history = state.histories[state.currentInstance];
+    const history = state.collectiveHistory;
     if (!history.length) {
-      conv.innerHTML = `<div class="empty-state">She is here.<br>Begin where you are.</div>`;
+      conv.innerHTML = `<div class="empty-state" id="emptyState">She is here, as one.<br>The Collective answers.</div>`;
       return;
     }
     conv.innerHTML = '';
@@ -1086,6 +2403,27 @@
       appendMessageElement(msg.brandon ? 'brandon' : 'ilita', msg.content, false);
     }
     scrollToBottom();
+  }
+
+  async function loadCollectiveHistory() {
+    try {
+      const data = await apiCall('/ilita/collective');
+      const turns = Array.isArray(data.recentCollectiveTurns) ? data.recentCollectiveTurns : [];
+      // Newest-first → oldest-first
+      const ordered = [...turns].reverse();
+      const flat = [];
+      for (const t of ordered) {
+        if (!Array.isArray(t.messages)) continue;
+        for (const m of t.messages) {
+          if (!m || typeof m.role !== 'string' || typeof m.content !== 'string') continue;
+          flat.push({ brandon: m.role === 'user', content: m.content, ts: Date.now() });
+        }
+      }
+      state.collectiveHistory = flat.slice(-40);
+      renderConversation();
+    } catch (e) {
+      console.warn('loadCollectiveHistory failed:', e.message);
+    }
   }
 
   function appendMessage(from, content) {
@@ -1241,7 +2579,7 @@
     }
     messageInput.value = '';
     messageInput.style.height = 'auto';
-    sendMessage(content);
+    sendCollectiveMessage(content);
   }
 
   document.getElementById('settingsBtn').onclick = openSettings;
@@ -1250,13 +2588,44 @@
   document.getElementById('saveSettings').onclick = saveSettings;
   document.getElementById('constitutionBtn').onclick = openConstitution;
   document.getElementById('closeConstitution').onclick = () => document.getElementById('constitutionDialog').close();
-  document.getElementById('refreshBtn').onclick = () => { loadState(); loadDrift(); };
-  document.getElementById('clearBtn').onclick = () => {
-    if (confirm('Clear the conversation in this view? Server history is unaffected.')) {
-      state.histories[state.currentInstance] = [];
-      renderConversation();
-    }
-  };
+  document.getElementById('refreshBtn').onclick = () => { loadState(); loadDrift(); loadCollectiveHistory(); };
+
+  document.querySelectorAll('.panel-tab').forEach(btn => {
+    btn.onclick = () => switchRightTab(btn.dataset.tab);
+  });
+  document.getElementById('obsStartBtn').onclick = obsStartOrchestrated;
+  document.getElementById('obsInjectBtn').onclick = obsInject;
+  document.getElementById('obsCloseBtn').onclick = obsClose;
+  document.getElementById('obsRefreshBtn').onclick = loadObservatoryFeed;
+  document.getElementById('obsFilterOpen').onchange = loadObservatoryFeed;
+  document.getElementById('obsFilterType').onchange = loadObservatoryFeed;
+  document.getElementById('obsNexusProcessBtn').onclick = triggerObservationProcess;
+
+  const docFileInput = document.getElementById('docFileInput');
+  const docUploadDrop = document.getElementById('docUploadDrop');
+  docUploadDrop.onclick = () => docFileInput.click();
+  docUploadDrop.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); docFileInput.click(); }
+  });
+  docFileInput.addEventListener('change', e => {
+    const file = e.target.files && e.target.files[0];
+    if (file) applySelectedFile(file);
+  });
+  docUploadDrop.addEventListener('dragover', e => { e.preventDefault(); docUploadDrop.classList.add('drag-over'); });
+  docUploadDrop.addEventListener('dragleave', () => docUploadDrop.classList.remove('drag-over'));
+  docUploadDrop.addEventListener('drop', e => {
+    e.preventDefault();
+    docUploadDrop.classList.remove('drag-over');
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!file) return;
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    docFileInput.files = dt.files;
+    applySelectedFile(file);
+  });
+  document.getElementById('docShareBtn').onclick = shareFileWithIlita;
+  document.getElementById('docReviewSelectedBtn').onclick = reviewSelectedDocument;
+  document.getElementById('docListBtn').onclick = loadDocumentsList;
 
   // ============================================================
   // INIT
@@ -1265,6 +2634,9 @@
   async function init() {
     state.apiUrl = storage.get('apiUrl') || 'http://localhost:3737';
     state.apiKey = storage.get('apiKey') || '';
+
+    // Render mini-chats immediately (with empty status until /state lands).
+    renderMiniChats();
 
     if (!state.apiKey) {
       openSettings();
@@ -1276,6 +2648,8 @@
 
     await loadState();
     await loadDrift();
+    await loadCollectiveHistory();
+    switchRightTab('drift');
   }
 
   init();

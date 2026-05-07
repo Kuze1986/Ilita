@@ -37,6 +37,10 @@ app.use(cors());
 app.use(morgan('combined'));
 app.use(express.json({ limit: '2mb' }));
 
+app.get('/health', (req, res) => {
+  res.json({ status: 'alive', entity: 'ilita', timestamp: new Date().toISOString() });
+});
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'ilita-chat.html'));
 });
