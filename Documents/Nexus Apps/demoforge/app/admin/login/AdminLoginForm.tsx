@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 
@@ -22,13 +21,14 @@ export function AdminLoginForm() {
     setMessage(null);
     setLoading(true);
     try {
-      const supabase = createBrowserSupabaseClient();
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
+      const res = await fetch("/api/admin/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
       });
-      if (error) {
-        setMessage(error.message);
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage(data.error ?? "Sign-in failed");
         setLoading(false);
         return;
       }
